@@ -146,7 +146,17 @@ export default function DashboardPage() {
         p.emi_day
       );
       if (dueDate >= currentMonthStart) {
-        breakdown[p.type] = (breakdown[p.type] || 0) + p.emi_amount;
+        const typeLabels: Record<string, string> = {
+          emi: "EMI",
+          loan: "Loan Interest",
+          credit_card: "Credit Card",
+          pay_later: "Pay Later",
+          bill: "Bills",
+          rent: "Rent"
+        };
+    
+        const type = typeLabels[p.type] || p.type;
+        breakdown[type] = (breakdown[type] || 0) + p.emi_amount;
       }
     });
     setTypeBreakdown(breakdown);
@@ -157,49 +167,55 @@ export default function DashboardPage() {
   return (
     <div className="grid gap-4 p-4 md:p-6 max-w-screen-xl mx-auto">
       {/* Upcoming Payment */}
-      {/* Upcoming Payment */}
-<Card>
-  <CardHeader>
-    <CardTitle className="text-lg">Upcoming Payment</CardTitle>
-  </CardHeader>
-  <CardContent>
-    {loading ? (
-      <>
-        <Skeleton className="h-4 w-32 mb-2" />
-        <Skeleton className="h-4 w-full mb-1" />
-        <Skeleton className="h-4 w-full mb-1" />
-        <Skeleton className="h-4 w-full mb-1" />
-        <Skeleton className="h-4 w-1/3 mt-2" />
-      </>
-    ) : upcoming ? (
-      <>
-        <p className="text-sm text-muted-foreground font-semibold mb-2">
-          Due on {upcoming.date}
-        </p>
-        {upcoming.items.map((item, i) => (
-          <div key={item.id} className="text-sm flex justify-between border-b py-1">
-            <span>{i + 1}. {item.title}</span>
-            <span>{formatINR(item.emi_amount)}</span>
-          </div>
-        ))}
-        <div className="pt-3 flex justify-between items-center">
-          <a
-            href="/user/month"
-            className="text-sm font-medium text-primary hover:underline flex items-center gap-1"
-          >
-            View All
-            <ChevronRight className="w-4 h-4" />
-          </a>
-          <div className="text-sm font-semibold">
-            Total: {formatINR(upcoming.total)}
-          </div>
-        </div>
-      </>
-    ) : (
-      <p className="text-sm text-muted-foreground">No upcoming payments.</p>
-    )}
-  </CardContent>
-</Card>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Upcoming Payment</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <>
+              <Skeleton className="h-4 w-32 mb-2" />
+              <Skeleton className="h-4 w-full mb-1" />
+              <Skeleton className="h-4 w-full mb-1" />
+              <Skeleton className="h-4 w-full mb-1" />
+              <Skeleton className="h-4 w-1/3 mt-2" />
+            </>
+          ) : upcoming ? (
+            <>
+              <p className="text-sm text-muted-foreground font-semibold mb-2">
+                Due on {upcoming.date}
+              </p>
+              {upcoming.items.map((item, i) => (
+                <div
+                  key={item.id}
+                  className="text-sm flex justify-between border-b py-1"
+                >
+                  <span>
+                    {i + 1}. {item.title}
+                  </span>
+                  <span>{formatINR(item.emi_amount)}</span>
+                </div>
+              ))}
+              <div className="pt-3 flex justify-between items-center">
+                <a
+                  href="/user/month"
+                  className="text-sm font-medium text-primary hover:underline flex items-center gap-1"
+                >
+                  View All
+                  <ChevronRight className="w-4 h-4" />
+                </a>
+                <div className="text-sm font-semibold">
+                  Total: {formatINR(upcoming.total)}
+                </div>
+              </div>
+            </>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              No upcoming payments.
+            </p>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Paid / Unpaid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
