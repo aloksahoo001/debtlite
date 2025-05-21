@@ -1,24 +1,21 @@
-export type Message =
-  | { success: string }
-  | { error: string }
-  | { message: string };
+'use client';
 
-export function FormMessage({ message }: { message: Message }) {
-  return (
-    <div className="flex flex-col gap-2 w-full max-w-md text-sm">
-      {"success" in message && (
-        <div className="text-foreground border-l-2 border-foreground px-4">
-          {message.success}
-        </div>
-      )}
-      {"error" in message && (
-        <div className="text-destructive-foreground border-l-2 border-destructive-foreground px-4">
-          {message.error}
-        </div>
-      )}
-      {"message" in message && (
-        <div className="text-foreground border-l-2 px-4">{message.message}</div>
-      )}
-    </div>
-  );
+import { useEffect } from "react";
+import { toast } from "sonner";
+import { useSearchParams } from "next/navigation";
+
+export function FormMessage() {
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const success = searchParams.get("success");
+    const error = searchParams.get("error");
+    const message = searchParams.get("message");
+
+    if (success) toast.success("Success", { description: success });
+    else if (error) toast.error("Error", { description: error });
+    else if (message) toast("Notice", { description: message });
+  }, [searchParams]);
+
+  return null;
 }
