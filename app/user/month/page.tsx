@@ -24,6 +24,7 @@ import { toast } from "sonner";
 import { CheckCircle, Landmark, User, Wallet } from "lucide-react";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { formatINR } from "@/utils/utils";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function ThisMonthPayablesComponent() {
   const supabase = createClient();
@@ -33,6 +34,7 @@ export default function ThisMonthPayablesComponent() {
   >([]);
   const [filterPayee, setFilterPayee] = useState<string>("all");
   const [uniquePayees, setUniquePayees] = useState<string[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
 
   const user = useAuthStore((state) => state.user);
   if (!user) return null;
@@ -42,6 +44,7 @@ export default function ThisMonthPayablesComponent() {
   }, []);
 
   const fetchData = async () => {
+    setLoading(true);
     const { data: payableData, error: payablesError } = await supabase
       .from("monthly_payables")
       .select("*");
@@ -52,6 +55,7 @@ export default function ThisMonthPayablesComponent() {
 
     if (payablesError || paymentsError) {
       toast.error("Error fetching data.");
+      setLoading(false);
       return;
     }
 
@@ -64,6 +68,7 @@ export default function ThisMonthPayablesComponent() {
     setPayments(filteredPayments);
     const payees = Array.from(new Set((payableData || []).map((p) => p.payee)));
     setUniquePayees(payees);
+    setLoading(false);
   };
 
   const groupByEmiDay = (list: Payable[]) => {
@@ -167,107 +172,134 @@ export default function ThisMonthPayablesComponent() {
         <div className="font-semibold">{format(new Date(), "MMM-yyyy")}</div>
       </div>
 
-      <Card className="mt-6">
-        <CardHeader>
-          <CardTitle className="text-base font-semibold">Summary</CardTitle>
-        </CardHeader>
-        <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-          <div>
-            <strong>Total Payable:</strong> {formatINR(total_payable)}
-          </div>
-          {/*<div>
-            <strong>Total Paid:</strong> {formatINR(total_paid)}
-          </div>*/}
-          <div>
-            <strong>Yet to Pay:</strong> {formatINR(total_yet_to_pay)}
-          </div>
-          <div>
-            <strong>Total Bills:</strong> {formatINR(total_bills)}
-          </div>
-          <div>
-            <strong>Total Debt:</strong> {formatINR(total_debt)}
-          </div>
-        </CardContent>
-      </Card>
-      {sortedEmiDays.map((emiDay) => {
-        const payablesForDay = grouped[emiDay];
-        const totalEmi = payablesForDay.reduce(
-          (sum, p) => sum + p.emi_amount,
-          0
-        );
-        return (
-          <Card key={emiDay}>
+      {loading ? (
+        <>
+          <Card>
             <CardHeader>
-              <CardTitle className="text-base font-semibold">
-                {getDueDate(emiDay)}
-              </CardTitle>
+              <Skeleton className="h-6 w-32" />
             </CardHeader>
-            <CardContent className="space-y-4">
-              {payablesForDay.map((p, i) => (
-                <div key={p.id} className="space-y-1">
-                  <div className="flex justify-between">
-                    <div className="text-sm font-medium">
-                      {i + 1}. {p.title} — ₹{p.emi_amount}
-                    </div>
-                    {isPaid(p.id) ? (
-                      <div className="inline-flex items-center gap-1 text-green-700 bg-green-100 px-2 py-0.5 rounded text-sm">
-                        <CheckCircle className="w-3.5 h-3.5" />
-                        Paid
-                      </div>
-                    ) : (
-                      <div>
-                        <Button
-                          size="sm"
-                          className="text-xs h-7"
-                          onClick={() => markAsPaid(p.id, p.emi_amount)}
-                        >
-                          Mark As Paid
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                  <div className="text-sm text-muted-foreground grid grid-cols-1 md:grid-cols-3 pb-2 md:gap-36">
-                    <div className="flex items-center justify-between md:justify-start gap-2">
-                      <div className="flex items-center gap-2 font-semibold">
-                        <Wallet className="w-4 h-4 text-foreground" />
-                        Pay Type:
-                      </div>
-                      <div className="items-center">
-                        {p.pay_type == "auto_debit" ? "Auto Debit" : "Manual"}
-                      </div>
-                    </div>
-                    <div className="flex justify-between md:justify-start gap-2 items-center">
-                      <div className="flex items-center gap-2 font-semibold">
-                        <Landmark className="w-4 h-4 text-foreground" />
-                        Bank:
-                      </div>
-                      <div className="items-center">{p.payment_bank}</div>
-                    </div>
-                    <div className="flex justify-between md:justify-start items-center gap-2">
-                      <div className="flex items-center gap-2 font-semibold">
-                        <User className="w-4 h-4 text-foreground" />
-                        Payee:
-                      </div>
-                      <div className="items-center">{p.payee}</div>
-                    </div>
-                    {/*<div className="flex justify-between md:justify-start items-center gap-2">
-                      <div className="flex items-center gap-2 font-semibold">
-                        <User className="w-4 h-4 text-foreground" />
-                        Total Remaining:
-                      </div>
-                      <div className="items-center">{formatINR(p.remaining_amount)}</div>
-                    </div>*/}
-                  </div>
-                  {i !== payablesForDay.length - 1 && <Separator />}
-                </div>
-              ))}
+            <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <Skeleton className="h-5 w-full" />
+              <Skeleton className="h-5 w-full" />
+              <Skeleton className="h-5 w-full" />
+              <Skeleton className="h-5 w-full" />
             </CardContent>
-            <CardFooter className="text-sm font-semibold">
-              Total EMI: {formatINR(totalEmi)}
-            </CardFooter>
           </Card>
-        );
-      })}
+          {[1, 2].map((_, i) => (
+            <Card key={i}>
+              <CardHeader>
+                <Skeleton className="h-6 w-48" />
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {[1, 2].map((_, j) => (
+                  <div key={j} className="space-y-2">
+                    <Skeleton className="h-5 w-3/4" />
+                    <Skeleton className="h-4 w-full" />
+                    {j !== 1 && <Separator />}
+                  </div>
+                ))}
+              </CardContent>
+              <CardFooter>
+                <Skeleton className="h-4 w-32" />
+              </CardFooter>
+            </Card>
+          ))}
+        </>
+      ) : (
+        <>
+          <Card className="mt-6">
+            <CardHeader>
+              <CardTitle className="text-base font-semibold">Summary</CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+              <div>
+                <strong>Total Payable:</strong> {formatINR(total_payable)}
+              </div>
+              <div>
+                <strong>Yet to Pay:</strong> {formatINR(total_yet_to_pay)}
+              </div>
+              <div>
+                <strong>Total Bills:</strong> {formatINR(total_bills)}
+              </div>
+              <div>
+                <strong>Total Debt:</strong> {formatINR(total_debt)}
+              </div>
+            </CardContent>
+          </Card>
+          {sortedEmiDays.map((emiDay) => {
+            const payablesForDay = grouped[emiDay];
+            const totalEmi = payablesForDay.reduce(
+              (sum, p) => sum + p.emi_amount,
+              0
+            );
+            return (
+              <Card key={emiDay}>
+                <CardHeader>
+                  <CardTitle className="text-base font-semibold">
+                    {getDueDate(emiDay)}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {payablesForDay.map((p, i) => (
+                    <div key={p.id} className="space-y-1">
+                      <div className="flex justify-between">
+                        <div className="text-sm font-medium">
+                          {i + 1}. {p.title} — ₹{p.emi_amount}
+                        </div>
+                        {isPaid(p.id) ? (
+                          <div className="inline-flex items-center gap-1 text-green-700 bg-green-100 px-2 py-0.5 rounded text-sm">
+                            <CheckCircle className="w-3.5 h-3.5" />
+                            Paid
+                          </div>
+                        ) : (
+                          <Button
+                            size="sm"
+                            className="text-xs h-7"
+                            onClick={() => markAsPaid(p.id, p.emi_amount)}
+                          >
+                            Mark As Paid
+                          </Button>
+                        )}
+                      </div>
+                      <div className="text-sm text-muted-foreground grid grid-cols-1 md:grid-cols-3 pb-2 md:gap-36">
+                        <div className="flex items-center justify-between md:justify-start gap-2">
+                          <div className="flex items-center gap-2 font-semibold">
+                            <Wallet className="w-4 h-4 text-foreground" />
+                            Pay Type:
+                          </div>
+                          <div className="items-center">
+                            {p.pay_type == "auto_debit"
+                              ? "Auto Debit"
+                              : "Manual"}
+                          </div>
+                        </div>
+                        <div className="flex justify-between md:justify-start gap-2 items-center">
+                          <div className="flex items-center gap-2 font-semibold">
+                            <Landmark className="w-4 h-4 text-foreground" />
+                            Bank:
+                          </div>
+                          <div className="items-center">{p.payment_bank}</div>
+                        </div>
+                        <div className="flex justify-between md:justify-start items-center gap-2">
+                          <div className="flex items-center gap-2 font-semibold">
+                            <User className="w-4 h-4 text-foreground" />
+                            Payee:
+                          </div>
+                          <div className="items-center">{p.payee}</div>
+                        </div>
+                      </div>
+                      {i !== payablesForDay.length - 1 && <Separator />}
+                    </div>
+                  ))}
+                </CardContent>
+                <CardFooter className="text-sm font-semibold">
+                  Total EMI: {formatINR(totalEmi)}
+                </CardFooter>
+              </Card>
+            );
+          })}
+        </>
+      )}
     </div>
   );
 }

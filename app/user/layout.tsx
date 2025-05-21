@@ -115,18 +115,21 @@ export default function userLayout({
               label="Overview"
               icon={LayoutDashboard}
               collapsed={collapsed}
+              onClick={() => setSidebarOpen(false)}
             />
             <SidebarLink
               href="/user/month"
               label="Track Current Month"
               icon={LayoutDashboard}
               collapsed={collapsed}
+              onClick={() => setSidebarOpen(false)}
             />
             <SidebarLink
               href="/user/payables"
               label="Payables"
               icon={Users}
               collapsed={collapsed}
+              onClick={() => setSidebarOpen(false)}
             />
           </nav>
         </ScrollArea>
@@ -276,17 +279,19 @@ function SidebarLink({
   label,
   icon: Icon,
   collapsed,
+  onClick,
 }: {
   href: string;
   label: string;
   icon: LucideIcon;
   collapsed: boolean;
+  onClick?: () => void;
 }) {
   const pathname = usePathname();
   const isActive = pathname.startsWith(href);
 
   return (
-    <Link href={href}>
+    <Link href={href} onClick={onClick}>
       <Button
         variant={isActive ? "secondary" : "ghost"}
         className={cn(
