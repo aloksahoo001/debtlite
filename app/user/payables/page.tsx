@@ -21,7 +21,7 @@ import PayableForm from "@/components/PayableForm";
 import { createClient } from "@/utils/supabase/client";
 import type { Payable } from "@/types/supabase";
 import { toast } from "sonner";
-import { format } from "date-fns";
+import { format, set } from "date-fns";
 import {
   CalendarDays,
   IndianRupee,
@@ -33,7 +33,7 @@ import {
   PlusIcon,
 } from "lucide-react";
 
-const PAGE_SIZE = 25;
+const PAGE_SIZE = 10;
 
 export type PayableInput = Omit<Payable, "id" | "created_at">;
 
@@ -48,9 +48,10 @@ export default function PayablesComponent() {
   const [hasMore, setHasMore] = useState(true);
   const [loading, setLoading] = useState(false);
 
-  async function fetchPayables(reset = false) {
+  async function fetchPayables(reset = false,dataPage = 1) {
     setLoading(true);
-    const from = reset ? 0 : (page - 1) * PAGE_SIZE;
+    console.log("page="+dataPage);
+    const from = reset ? 0 : (dataPage - 1) * PAGE_SIZE;
     const to = from + PAGE_SIZE - 1;
 
     const { data, error } = await supabase
@@ -67,7 +68,7 @@ export default function PayablesComponent() {
       else setPayables((prev) => [...prev, ...(data as Payable[])]);
       setHasMore((data?.length || 0) === PAGE_SIZE);
     }
-
+    setPage(dataPage);
     setLoading(false);
   }
 
@@ -206,11 +207,11 @@ export default function PayablesComponent() {
       <div className="grid grid-cols-1 gap-4">
         {loading
           ? Array.from({ length: 3 }).map((_, i) => <SkeletonCard key={i} />)
-          : filteredData.map((p) => (
+          : filteredData.map((p,index) => (
               <Card key={p.id}>
                 <CardHeader className="flex flex-row items-start justify-between p-4">
                   <CardTitle className="text-base font-medium">
-                    {p.title} ({getDueDate(p.emi_day)})
+                    {index+1}. {p.title} ({getDueDate(p.emi_day)})
                   </CardTitle>
                   <span
                     className={`text-xs px-2.5 py-1.5 rounded-full flex items-center gap-1 ${
@@ -233,8 +234,7 @@ export default function PayablesComponent() {
                     <div className="flex items-center gap-2">
                       <CalendarDays className="w-4 h-4" />
                       <span>
-                        <strong>Next Due Date:</strong>{" "}
-                        {getDueDate(p.emi_day)}
+                        <strong>Next Due Date:</strong> {getDueDate(p.emi_day)}
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
@@ -247,20 +247,59 @@ export default function PayablesComponent() {
                     <div className="flex items-center gap-2">
                       <Banknote className="w-4 h-4" />
                       <span>
-                        <strong>Total:</strong>{" "}
-                        ₹{p.total_amount.toLocaleString()}
+                        <strong>Total:</strong> ₹
+                        {p.total_amount.toLocaleString()}
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
                       <Banknote className="w-4 h-4" />
                       <span>
-                        <strong>Remaining:</strong>{" "}
-                        ₹{p.remaining_amount.toLocaleString()}
+                        <strong>Remaining:</strong> ₹
+                        {p.remaining_amount.toLocaleString()}
                       </span>
                     </div>
                   </div>
                 </CardContent>
-
+                <CardContent className="md:hidden ld:hidden sm:hidden text-sm text-muted-foreground p-4 py-0">
+                  <div className="flex grid grid-cols-1 text-md font-medium">
+                    <div className="flex justify-between">
+                      <div className="flex items-center gap-2">
+                        <CalendarDays className="w-4 h-4" />
+                        Next Due Date
+                      </div>
+                      <div className="flex justify-end">
+                        {getDueDate(p.emi_day)}
+                      </div>
+                    </div>
+                    <div className="flex justify-between">
+                      <div className="flex items-center gap-2">
+                        <Wallet className="w-4 h-4" />
+                        Pay Type
+                      </div>
+                      <div className="flex justify-end">
+                        {p.pay_type == "auto_debit" ? "Auto Debit" : "Manual"}
+                      </div>
+                    </div>
+                    <div className="flex justify-between">
+                      <div className="flex items-center gap-2">
+                        <Banknote className="w-4 h-4" />
+                        Total
+                      </div>
+                      <div className="flex justify-end">
+                        ₹{p.total_amount.toLocaleString()}
+                      </div>
+                    </div>
+                    <div className="flex justify-between">
+                      <div className="flex items-center gap-2">
+                        <Banknote className="w-4 h-4" />
+                        Remaining
+                      </div>
+                      <div className="flex justify-end">
+                        ₹{p.remaining_amount.toLocaleString()}
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
                 <CardFooter className="flex justify-between p-4">
                   <div className="text-sm font-bold">
                     <span className="text-muted-foreground">Payable:</span> ₹
@@ -299,8 +338,7 @@ export default function PayablesComponent() {
         <div className="flex justify-center pt-4">
           <Button
             onClick={() => {
-              setPage((prev) => prev + 1);
-              fetchPayables();
+              fetchPayables(false,page+1);
             }}
           >
             Load More
