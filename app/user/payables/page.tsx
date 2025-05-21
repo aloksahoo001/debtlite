@@ -46,10 +46,13 @@ export default function PayablesComponent() {
   const [editing, setEditing] = useState<Payable | null>(null);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   async function fetchPayables(reset = false) {
+    setLoading(true);
     const from = reset ? 0 : (page - 1) * PAGE_SIZE;
     const to = from + PAGE_SIZE - 1;
+
     const { data, error } = await supabase
       .from("monthly_payables")
       .select("*")
@@ -64,6 +67,8 @@ export default function PayablesComponent() {
       else setPayables((prev) => [...prev, ...(data as Payable[])]);
       setHasMore((data?.length || 0) === PAGE_SIZE);
     }
+
+    setLoading(false);
   }
 
   useEffect(() => {
@@ -123,6 +128,29 @@ export default function PayablesComponent() {
     return format(new Date(year, dueMonth, emi_day), "dd-MMM-yy");
   };
 
+  function SkeletonCard() {
+    return (
+      <Card className="animate-pulse">
+        <CardHeader className="p-4">
+          <div className="h-4 w-1/2 bg-muted rounded mb-2" />
+          <div className="h-3 w-24 bg-muted rounded" />
+        </CardHeader>
+        <CardContent className="p-4 space-y-2">
+          <div className="h-3 w-full bg-muted rounded" />
+          <div className="h-3 w-5/6 bg-muted rounded" />
+          <div className="h-3 w-4/6 bg-muted rounded" />
+        </CardContent>
+        <CardFooter className="p-4 flex justify-between">
+          <div className="h-3 w-20 bg-muted rounded" />
+          <div className="flex gap-2">
+            <div className="h-6 w-12 bg-muted rounded" />
+            <div className="h-6 w-12 bg-muted rounded" />
+          </div>
+        </CardFooter>
+      </Card>
+    );
+  }
+
   return (
     <div className="space-y-4 p-4">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
@@ -176,132 +204,98 @@ export default function PayablesComponent() {
       </div>
 
       <div className="grid grid-cols-1 gap-4">
-        {filteredData.map((p) => (
-          <Card key={p.id}>
-            <CardHeader className="flex flex-row items-start justify-between p-4">
-              <CardTitle className="text-base font-medium">
-                {p.title} ({getDueDate(p.emi_day)})
-              </CardTitle>
-              <span
-                className={`text-xs px-2.5 py-1.5 rounded-full flex items-center gap-1 ${
-                  p.is_closed
-                    ? "bg-rose-100 text-rose-700"
-                    : "bg-green-100 text-green-700"
-                }`}
-              >
-                {p.is_closed ? (
-                  <XCircle className="h-3.5 w-3.5" />
-                ) : (
-                  <CheckCircle className="h-3.5 w-3.5" />
-                )}
-                {p.is_closed ? "Closed" : "Active"}
-              </span>
-            </CardHeader>
-            <CardContent className="hidden md:block lg:block sm:block text-sm text-muted-foreground p-4 py-0">
-              <div className="flex grid grid-cols-1 sm:grid-cols-4 md:grid-cols-4">
-                <div className="flex items-center gap-2">
-                  <CalendarDays className="w-4 h-4" />
-                  <span>
-                    <strong>Next Due Date:</strong> {getDueDate(p.emi_day)}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Wallet className="w-4 h-4" />
-                  <span>
-                    <strong>Pay Type:</strong> {p.pay_type == 'auto_debit'? 'Auto Debit':'Manual'}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Banknote className="w-4 h-4" />
-                  <span>
-                    <strong>Total:</strong> ₹{p.total_amount.toLocaleString()}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Banknote className="w-4 h-4" />
-                  <span>
-                    <strong>Remaining:</strong> ₹
-                    {p.remaining_amount.toLocaleString()}
-                  </span>
-                </div>
-                
-              </div>
-            </CardContent>
-            <CardContent className="md:hidden ld:hidden sm:hidden text-sm text-muted-foreground p-4 py-0">
-              <div className="flex grid grid-cols-1 text-md font-medium">
-                <div className="flex justify-between">
-                  <div className="flex items-center gap-2">
-                    <CalendarDays className="w-4 h-4" />
-                    Next Due Date
-                  </div>
-                  <div className="flex justify-end">
-                     {getDueDate(p.emi_day)}
-                  </div>
-                </div>
-                <div className="flex justify-between">
-                  <div className="flex items-center gap-2">
-                  <Wallet className="w-4 h-4" />
-                  Pay Type
-                  </div>
-                  <div className="flex justify-end">
-                  {p.pay_type == 'auto_debit'? 'Auto Debit':'Manual'}
-                  </div>
-                </div>
-                <div className="flex justify-between">
-                  <div className="flex items-center gap-2">
-                  <Banknote className="w-4 h-4" />
-                    Total
-                  </div>
-                  <div className="flex justify-end">
-                  ₹{p.total_amount.toLocaleString()}
-                  </div>
-                </div>
-                <div className="flex justify-between">
-                  <div className="flex items-center gap-2">
-                  <Banknote className="w-4 h-4" />
-                  Remaining
-                  </div>
-                  <div className="flex justify-end">
-                  ₹{p.remaining_amount.toLocaleString()}
-                  </div>
-                </div>  
-              </div>
-            </CardContent>
-            <CardFooter className="flex justify-between p-4">
-              <div className="text-sm font-bold">
-                <span className="text-muted-foreground">Payable:</span> ₹
-                {p.emi_amount}
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-7 px-2 text-xs"
-                  onClick={() => {
-                    setEditing(p);
-                    setDialogOpen(true);
-                  }}
-                >
-                  <FileEdit className="w-3.5 h-3.5 mr-1" />
-                  Edit
-                </Button>
-                {!p.is_closed && (
-                  <Button
-                    size="sm"
-                    variant="destructive"
-                    className="h-7 px-2 text-xs"
-                    onClick={() => handleClose(p.id)}
+        {loading
+          ? Array.from({ length: 3 }).map((_, i) => <SkeletonCard key={i} />)
+          : filteredData.map((p) => (
+              <Card key={p.id}>
+                <CardHeader className="flex flex-row items-start justify-between p-4">
+                  <CardTitle className="text-base font-medium">
+                    {p.title} ({getDueDate(p.emi_day)})
+                  </CardTitle>
+                  <span
+                    className={`text-xs px-2.5 py-1.5 rounded-full flex items-center gap-1 ${
+                      p.is_closed
+                        ? "bg-rose-100 text-rose-700"
+                        : "bg-green-100 text-green-700"
+                    }`}
                   >
-                    Close
-                  </Button>
-                )}
-              </div>
-            </CardFooter>
-          </Card>
-        ))}
+                    {p.is_closed ? (
+                      <XCircle className="h-3.5 w-3.5" />
+                    ) : (
+                      <CheckCircle className="h-3.5 w-3.5" />
+                    )}
+                    {p.is_closed ? "Closed" : "Active"}
+                  </span>
+                </CardHeader>
+
+                <CardContent className="hidden md:block lg:block sm:block text-sm text-muted-foreground p-4 py-0">
+                  <div className="flex grid grid-cols-1 sm:grid-cols-4 md:grid-cols-4">
+                    <div className="flex items-center gap-2">
+                      <CalendarDays className="w-4 h-4" />
+                      <span>
+                        <strong>Next Due Date:</strong>{" "}
+                        {getDueDate(p.emi_day)}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Wallet className="w-4 h-4" />
+                      <span>
+                        <strong>Pay Type:</strong>{" "}
+                        {p.pay_type == "auto_debit" ? "Auto Debit" : "Manual"}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Banknote className="w-4 h-4" />
+                      <span>
+                        <strong>Total:</strong>{" "}
+                        ₹{p.total_amount.toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Banknote className="w-4 h-4" />
+                      <span>
+                        <strong>Remaining:</strong>{" "}
+                        ₹{p.remaining_amount.toLocaleString()}
+                      </span>
+                    </div>
+                  </div>
+                </CardContent>
+
+                <CardFooter className="flex justify-between p-4">
+                  <div className="text-sm font-bold">
+                    <span className="text-muted-foreground">Payable:</span> ₹
+                    {p.emi_amount}
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 px-2 text-xs"
+                      onClick={() => {
+                        setEditing(p);
+                        setDialogOpen(true);
+                      }}
+                    >
+                      <FileEdit className="w-3.5 h-3.5 mr-1" />
+                      Edit
+                    </Button>
+                    {!p.is_closed && (
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        className="h-7 px-2 text-xs"
+                        onClick={() => handleClose(p.id)}
+                      >
+                        Close
+                      </Button>
+                    )}
+                  </div>
+                </CardFooter>
+              </Card>
+            ))}
       </div>
 
-      {hasMore && (
+      {hasMore && !loading && (
         <div className="flex justify-center pt-4">
           <Button
             onClick={() => {
