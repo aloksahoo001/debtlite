@@ -1,3 +1,5 @@
+import { User } from "@supabase/supabase-js";
+
 // types/supabase.ts
 export type Payable = {
   id: string;
@@ -32,3 +34,13 @@ export type Database = {
     };
   };
 };
+
+export interface Profile {
+  display_name?: string;
+  photo_url?: string;
+  [key: string]: any;
+}
+
+export interface ExtendedUser extends User {
+  profile?: Profile;
+}

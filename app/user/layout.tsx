@@ -50,6 +50,8 @@ export default function userLayout({
     return null;
   }
 
+  const avatarUrl = ``;
+
   const getPageTitle = () => {
     if (pathname.startsWith("/user/dashboard")) return "Overview";
     if (pathname.startsWith("/user/payables")) return "Payables";
@@ -124,15 +126,22 @@ export default function userLayout({
         {/* Footer */}
         <div className="p-4 border-t flex items-center gap-3">
           <Avatar className="h-8 w-8">
-            <AvatarImage src="/user-avatar.jpg" />
-            <AvatarFallback>AD</AvatarFallback>
+            <AvatarImage src={avatarUrl} />
+            <AvatarFallback>
+              {(user.profile?.display_name || "User")
+                .split(" ")
+                .filter(Boolean)
+                .slice(0, 2)
+                .map((word) => word.charAt(0).toUpperCase())
+                .join("")}
+            </AvatarFallback>
           </Avatar>
           {!collapsed && (
             <div>
-              <div className="text-sm font-medium">DebtLite User</div>
-              <div className="text-xs text-muted-foreground">
-                {user.email}
+              <div className="text-sm font-medium">
+                {user.profile?.display_name}
               </div>
+              <div className="text-xs text-muted-foreground">{user.email}</div>
             </div>
           )}
         </div>
@@ -199,13 +208,20 @@ export default function userLayout({
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" className="flex items-center gap-2">
                   <Avatar className="h-8 w-8">
-                    <AvatarImage src="/user-avatar.jpg" />
-                    <AvatarFallback>U</AvatarFallback>
+                    <AvatarImage src={avatarUrl} />
+                    <AvatarFallback>
+                      {(user.profile?.display_name || "User")
+                        .split(" ")
+                        .filter(Boolean)
+                        .slice(0, 2)
+                        .map((word) => word.charAt(0).toUpperCase())
+                        .join("")}
+                    </AvatarFallback>
                   </Avatar>
                   {/* 👇 Hide name on mobile, show on md+ */}
                   {!collapsed && (
                     <span className="hidden md:block text-sm font-medium">
-                      {user.email}
+                      {user.profile?.display_name}
                     </span>
                   )}
                 </Button>

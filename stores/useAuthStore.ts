@@ -1,10 +1,10 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { User } from "@supabase/supabase-js";
+import type { ExtendedUser } from "@/types/supabase";
 
 type AuthState = {
-  user: User | null;
-  setUser: (user: User) => void;
+  user: ExtendedUser | null;
+  setUser: (user: ExtendedUser) => void;
   clearUser: () => void;
 };
 

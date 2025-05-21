@@ -42,6 +42,7 @@ export async function signUpUser(email: string, password: string): Promise<AuthN
 export async function signInUser(email: string, password: string): Promise<AuthResponse> {
   const supabase = await createClient();
 
+  // Sign in using email/password
   const { error } = await supabase.auth.signInWithPassword({
     email,
     password,
@@ -51,26 +52,49 @@ export async function signInUser(email: string, password: string): Promise<AuthR
     return { success: false, message: error.message };
   }
 
+  // Get the authenticated user
   const {
     data: { user },
+    error: userError,
   } = await supabase.auth.getUser();
 
-  if (!user) return { success: false, message: "User not found after login." };
-
-  const { data, error } = await supabase.auth.admin.updateUserById(
-  'b980d3d6-7111-48dc-b3ec-b41978da3194', // UID
-  {
-    user_metadata: {
-      display_name: 'Alok Sahoo'
-    }
+  if (userError || !user) {
+    return { success: false, message: "User not found after login." };
   }
-)
+
+  // Fetch the profile
+  let { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("id", user.id)
+    .single();
+
+  // Auto-create profile if not found
+  if (profileError || !profile) {
+    const { data: insertedProfile, error: insertError } = await supabase
+      .from("profiles")
+      .insert({
+        id: user.id,
+        display_name: "Your Name", // default blank name
+        photo_url: "",
+      })
+      .select()
+      .single();
+
+    profile = insertedProfile || null;
+  }
+
+  const userData = {
+    ...user,
+    profile: profile,
+  };
 
   return {
     success: true,
-    user: user,
+    user: userData,
   };
 }
+
 
 export async function forgotPassword(email: string): Promise<AuthNoUserResponse> {
   const supabase = await createClient();
