@@ -35,6 +35,7 @@ import { LucideIcon } from "lucide-react";
 import { UserThemeSwitcher } from "@/components/theme-switcher";
 import { signOutUser } from "@/lib/api/auth";
 import { useAuthStore } from "@/stores/useAuthStore";
+import { format } from "date-fns";
 
 export default function userLayout({
   children,
@@ -55,6 +56,7 @@ export default function userLayout({
   const getPageTitle = () => {
     if (pathname.startsWith("/user/dashboard")) return "Overview";
     if (pathname.startsWith("/user/payables")) return "Payables";
+    if (pathname.startsWith("/user/month")) return "Track Payables";
     return "User";
   };
 
@@ -111,6 +113,12 @@ export default function userLayout({
             <SidebarLink
               href="/user/dashboard"
               label="Overview"
+              icon={LayoutDashboard}
+              collapsed={collapsed}
+            />
+            <SidebarLink
+              href="/user/month"
+              label="Track Current Month"
               icon={LayoutDashboard}
               collapsed={collapsed}
             />
@@ -252,9 +260,9 @@ export default function userLayout({
         </header>
 
         {/* Main content */}
-        <main className="flex-1 overflow-y-auto mb-5 md:mb-7">
+        <main className="flex-1 overflow-y-auto mb-7 md:mb-7">
           {children}
-          <footer className="mt-5 text-center text-muted-foreground text-sm">
+          <footer className="pt-5 text-center text-muted-foreground text-sm">
             <p>🎯 Best of luck! Keep pushing forward.</p>
           </footer>
         </main>

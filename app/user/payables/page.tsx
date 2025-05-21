@@ -21,10 +21,9 @@ import PayableForm from "@/components/PayableForm";
 import { createClient } from "@/utils/supabase/client";
 import type { Payable } from "@/types/supabase";
 import { toast } from "sonner";
-import { format, set } from "date-fns";
+import { format } from "date-fns";
 import {
   CalendarDays,
-  IndianRupee,
   Wallet,
   Banknote,
   CheckCircle,
