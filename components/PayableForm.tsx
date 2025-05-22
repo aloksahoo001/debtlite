@@ -66,8 +66,6 @@ export default function PayableForm({
     e.preventDefault();
     if (!form.title.trim() || !form.type.trim())
       return alert("Title and type are required");
-    if (form.total_amount <= 0 || form.emi_amount <= 0)
-      return alert("Amount values must be positive");
     onSubmit(form);
   };
 
@@ -203,7 +201,7 @@ export default function PayableForm({
                 <SelectValue placeholder="Select Payee" />
               </SelectTrigger>
               <SelectContent>
-                {["Alok", "Sweta"].map((item) => (
+                {["Alok", "Sweta", "Raja"].map((item) => (
                   <SelectItem key={item} value={item}>
                     {item}
                   </SelectItem>
