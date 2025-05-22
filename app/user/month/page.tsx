@@ -130,7 +130,7 @@ export default function ThisMonthPayablesComponent() {
   const total_yet_to_pay = total_payable - total_paid;
 
   const total_debt = allPayables.reduce((sum, p) => {
-    return p.type !== "bill" && p.type !== "rent"
+    return p.type !== "bill" && p.type !== "rent" && p.type !== "loan"
       ? sum + (p.remaining_amount || 0)
       : sum;
   }, 0);
