@@ -113,6 +113,27 @@ export default function PayableForm({
             </Select>
           </div>
           <div>
+            <Label>Monthly Payable Amount</Label>
+            <Input
+              type="text"
+              value={form.emi_amount}
+              onChange={(e) =>
+                handleChange("emi_amount", Number(e.target.value))
+              }
+              required
+            />
+          </div>
+          <div>
+            <Label>EMI Day</Label>
+            <Input
+              type="number"
+              value={form.emi_day}
+              min={1}
+              max={31}
+              onChange={(e) => handleChange("emi_day", Number(e.target.value))}
+            />
+          </div>
+          <div>
             <Label>Total Amount</Label>
             <Input
               type="text"
@@ -132,27 +153,6 @@ export default function PayableForm({
                 handleChange("remaining_amount", Number(e.target.value))
               }
               required
-            />
-          </div>
-          <div>
-            <Label>EMI Amount</Label>
-            <Input
-              type="text"
-              value={form.emi_amount}
-              onChange={(e) =>
-                handleChange("emi_amount", Number(e.target.value))
-              }
-              required
-            />
-          </div>
-          <div>
-            <Label>EMI Day</Label>
-            <Input
-              type="number"
-              value={form.emi_day}
-              min={1}
-              max={31}
-              onChange={(e) => handleChange("emi_day", Number(e.target.value))}
             />
           </div>
           <div>
@@ -192,24 +192,6 @@ export default function PayableForm({
             </Select>
           </div>
           <div>
-            <Label>Payee</Label>
-            <Select
-              value={form.payee}
-              onValueChange={(val) => handleChange("payee", val)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select Payee" />
-              </SelectTrigger>
-              <SelectContent>
-                {["Alok", "Sweta", "Raja"].map((item) => (
-                  <SelectItem key={item} value={item}>
-                    {item}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
             <Label>Pay Type</Label>
             <Select
               value={form.pay_type}
@@ -225,6 +207,24 @@ export default function PayableForm({
                 ].map(({ label, value }) => (
                   <SelectItem key={value} value={value}>
                     {label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label>Payee</Label>
+            <Select
+              value={form.payee}
+              onValueChange={(val) => handleChange("payee", val)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select Payee" />
+              </SelectTrigger>
+              <SelectContent>
+                {["Alok", "Sweta", "Raja"].map((item) => (
+                  <SelectItem key={item} value={item}>
+                    {item}
                   </SelectItem>
                 ))}
               </SelectContent>
