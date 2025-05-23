@@ -136,7 +136,7 @@ export default function ThisMonthPayablesComponent() {
   }, 0);
 
   const total_bills = allPayables.reduce((sum, p) => {
-    return p.type == "bill" ? sum + (p.remaining_amount || 0) : sum;
+    return p.type == "bill" ? sum + (p.emi_amount || 0) : sum;
   }, 0);
 
   const getDueDate = (emi_day: number) => {
