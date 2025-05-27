@@ -21,10 +21,11 @@ import { createClient } from "@/utils/supabase/client";
 import type { Payable } from "@/types/supabase";
 import { format, isSameMonth } from "date-fns";
 import { toast } from "sonner";
-import { CheckCircle, Landmark, User, Wallet } from "lucide-react";
+import { CheckCircle, Clock, Landmark, User, Wallet } from "lucide-react";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { formatINR } from "@/utils/utils";
 import { Skeleton } from "@/components/ui/skeleton";
+import { MarkAsPaidButton } from "@/components/MarkAsPaidButton";
 
 export default function ThisMonthPayablesComponent() {
   const supabase = createClient();
@@ -67,7 +68,7 @@ export default function ThisMonthPayablesComponent() {
     setPayables(payableData || []);
     setPayments(filteredPayments);
     const payees = Array.from(new Set((payableData || []).map((p) => p.payee)));
-    setUniquePayees(payees);
+    setUniquePayees(payees.sort());
     setLoading(false);
   };
 
@@ -84,12 +85,17 @@ export default function ThisMonthPayablesComponent() {
     return payments.some((p) => p.monthly_payable_id === payableId);
   };
 
-  const markAsPaid = async (payableId: string, amountPaid: Number) => {
+  const markAsPaid = async (
+    payableId: string,
+    amountPaid: Number,
+    remainingAmount: Number
+  ) => {
     const { error } = await supabase.from("payments").insert({
       monthly_payable_id: payableId,
       user_id: user.id,
       amount_paid: amountPaid,
       payment_date: new Date().toISOString(),
+      remaining_amount: remainingAmount,
     });
 
     if (error) {
@@ -252,16 +258,13 @@ export default function ThisMonthPayablesComponent() {
                             Paid
                           </div>
                         ) : (
-                          <Button
-                            size="sm"
-                            className="text-xs h-7"
-                            onClick={() => markAsPaid(p.id, p.emi_amount)}
-                          >
-                            Mark As Paid
-                          </Button>
+                          <MarkAsPaidButton
+                            payable={p}
+                            onPaymentSuccess={fetchData}
+                          />
                         )}
                       </div>
-                      <div className="text-sm text-muted-foreground grid grid-cols-1 md:grid-cols-3 pb-2 md:gap-36">
+                      <div className="text-sm text-muted-foreground grid grid-cols-1 md:grid-cols-4 pb-2">
                         <div className="flex items-center justify-between md:justify-start gap-2">
                           <div className="flex items-center gap-2 font-semibold">
                             <Wallet className="w-4 h-4 text-foreground" />
@@ -269,7 +272,7 @@ export default function ThisMonthPayablesComponent() {
                           </div>
                           <div className="items-center">
                             {p.pay_type == "auto_debit"
-                              ? "Auto Debit"
+                              ? "Auto"
                               : "Manual"}
                           </div>
                         </div>
@@ -287,6 +290,13 @@ export default function ThisMonthPayablesComponent() {
                           </div>
                           <div className="items-center">{p.payee}</div>
                         </div>
+                        <div className="flex justify-between md:justify-start items-center gap-2">
+                          <div className="flex items-center gap-2 font-semibold">
+                            <Clock className="w-4 h-4 text-foreground" />
+                            Remaining:
+                          </div>
+                          <div className="items-center">{formatINR(p.remaining_amount)}</div>
+                        </div>  
                       </div>
                       {i !== payablesForDay.length - 1 && <Separator />}
                     </div>

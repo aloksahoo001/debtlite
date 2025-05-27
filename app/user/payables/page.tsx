@@ -32,24 +32,25 @@ import {
   PlusIcon,
 } from "lucide-react";
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 50;
 
 export type PayableInput = Omit<Payable, "id" | "created_at">;
 
 export default function PayablesComponent() {
   const supabase = createClient();
   const [payables, setPayables] = useState<Payable[]>([]);
-  const [filter, setFilter] = useState("active");
+  const [filter, setFilter] = useState("all");
   const [sortKey, setSortKey] = useState("emi_day");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Payable | null>(null);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [uniquePayees, setUniquePayees] = useState<string[]>([]);
 
-  async function fetchPayables(reset = false,dataPage = 1) {
+  async function fetchPayables(reset = false, dataPage = 1) {
     setLoading(true);
-    console.log("page="+dataPage);
+    console.log("page=" + dataPage);
     const from = reset ? 0 : (dataPage - 1) * PAGE_SIZE;
     const to = from + PAGE_SIZE - 1;
 
@@ -67,6 +68,8 @@ export default function PayablesComponent() {
       else setPayables((prev) => [...prev, ...(data as Payable[])]);
       setHasMore((data?.length || 0) === PAGE_SIZE);
     }
+    const payees = Array.from(new Set((data || []).map((p) => p.payee)));
+    setUniquePayees(payees.sort());
     setPage(dataPage);
     setLoading(false);
   }
@@ -116,7 +119,7 @@ export default function PayablesComponent() {
   };
 
   const filteredData = payables.filter(
-    (p) => filter === "all" || p.status === filter
+    (p) => filter === "all" || p.payee === filter
   );
 
   const getDueDate = (emi_day: number) => {
@@ -161,8 +164,11 @@ export default function PayablesComponent() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All</SelectItem>
-              <SelectItem value="active">Active</SelectItem>
-              <SelectItem value="closed">Closed</SelectItem>
+              {uniquePayees.map((payee) => (
+                <SelectItem key={payee} value={payee}>
+                  {payee}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
 
@@ -206,11 +212,11 @@ export default function PayablesComponent() {
       <div className="grid grid-cols-1 gap-4">
         {loading
           ? Array.from({ length: 3 }).map((_, i) => <SkeletonCard key={i} />)
-          : filteredData.map((p,index) => (
+          : filteredData.map((p, index) => (
               <Card key={p.id}>
                 <CardHeader className="flex flex-row items-start justify-between p-4">
                   <CardTitle className="text-base font-medium">
-                    {index+1}. {p.title} ({getDueDate(p.emi_day)})
+                    {index + 1}. {p.title} ({getDueDate(p.emi_day)})
                   </CardTitle>
                   <span
                     className={`text-xs px-2.5 py-1.5 rounded-full flex items-center gap-1 ${
@@ -337,7 +343,7 @@ export default function PayablesComponent() {
         <div className="flex justify-center pt-4">
           <Button
             onClick={() => {
-              fetchPayables(false,page+1);
+              fetchPayables(false, page + 1);
             }}
           >
             Load More

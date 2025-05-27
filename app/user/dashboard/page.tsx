@@ -8,6 +8,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format, isSameMonth } from "date-fns";
 import { ChevronRight } from "lucide-react";
+import MonthlyPaymentsChart from "@/components/MonthlyPaymentsChart";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from "@/components/ui/carousel";
+import MonthlyRemaingDebtChart from "@/components/MonthlyRemainingDebtChart";
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
@@ -37,12 +46,15 @@ type Payment = {
 export default function DashboardPage() {
   const supabase = createClient();
   const [loading, setLoading] = useState(true);
-  const [upcoming, setUpcoming] = useState<{
-    date: string;
-    total: number;
-    items: Payable[];
-  } | null>(null);
-  const [payStats, setPayStats] = useState({ paid: 0, unpaid: 0 });
+  const [upcoming, setUpcoming] = useState<
+    Array<{ date: string; total: number; items: Payable[] }>
+  >([]);
+  const [payStats, setPayStats] = useState({
+    paid: 0,
+    unpaid: 0,
+    totalPayableAmount: 0,
+    totalPaybles: 0,
+  });
   const [principalExtra, setPrincipalExtra] = useState({
     principal: 0,
     extra: 0,
@@ -50,6 +62,9 @@ export default function DashboardPage() {
   const [typeBreakdown, setTypeBreakdown] = useState<Record<string, number>>(
     {}
   );
+  const [typeRemainingBreakdown, setTypeRemainingBreakdown] = useState<
+    Record<string, number>
+  >({});
 
   useEffect(() => {
     fetchDashboardData();
@@ -62,9 +77,7 @@ export default function DashboardPage() {
       .from("monthly_payables")
       .select("*");
 
-    const { data: paymentsRaw } = await supabase
-      .from("payments")
-      .select("monthly_payable_id, payment_date");
+    const { data: paymentsRaw } = await supabase.from("payments").select("*");
 
     const payables = payablesRaw ?? [];
     const payments = paymentsRaw ?? [];
@@ -77,28 +90,54 @@ export default function DashboardPage() {
     );
 
     // 1. Upcoming Payables
-    const upcomingPayables = (payables ?? []).filter(
-      (p) => p.emi_day > today.getDate()
+    const upcomingPayables = (payables ?? [])
+      .map((p) => {
+        const emiDate = new Date(
+          today.getFullYear(),
+          today.getMonth(),
+          p.emi_day
+        );
+
+        // If emi_day < today and it's already passed this month, assume it's for next month
+        if (p.emi_day < today.getDate()) {
+          emiDate.setMonth(emiDate.getMonth() + 1);
+        }
+
+        return { ...p, emiDate };
+      })
+      .filter((p) => {
+        const pDate = p.emiDate;
+        return pDate.toDateString() === today.toDateString() || pDate > today;
+      })
+      .sort((a, b) => a.emiDate.getTime() - b.emiDate.getTime());
+
+    // Group by emiDate (actual Date)
+    const groupedByDate: Record<string, Payable[]> = {};
+    upcomingPayables.forEach((p) => {
+      const key = p.emiDate.toDateString(); // ensures proper grouping by full date
+      groupedByDate[key] = [...(groupedByDate[key] || []), p];
+    });
+
+    // Pick today’s payments and the next distinct date (if any)
+    const allDates = Object.keys(groupedByDate).sort(
+      (a, b) => new Date(a).getTime() - new Date(b).getTime()
     );
-    if (upcomingPayables.length) {
-      const groupedByDay: Record<number, Payable[]> = {};
-      upcomingPayables.forEach((p) => {
-        groupedByDay[p.emi_day] = [...(groupedByDay[p.emi_day] || []), p];
-      });
 
-      const nextEmiDay = Math.min(...Object.keys(groupedByDay).map(Number));
-      const items = groupedByDay[nextEmiDay];
+    const finalGroups = allDates
+    .filter((d) => new Date(d) >= today) // only today or future
+    .slice(0, 5);
+
+    const result = finalGroups.map((dateKey) => {
+      const items = groupedByDate[dateKey];
       const total = items.reduce((sum, p) => sum + p.emi_amount, 0);
-
-      setUpcoming({
-        date: format(
-          new Date(today.getFullYear(), today.getMonth(), nextEmiDay),
-          "MMM dd, yyyy"
-        ),
+      return {
+        date: format(new Date(dateKey), "MMM dd, yyyy"),
         total,
         items,
-      });
-    }
+      };
+    });
+
+    setUpcoming(result);
 
     // 2. Paid / Unpaid This Month
     const thisMonthPayments = (payments ?? []).filter((p) =>
@@ -107,8 +146,11 @@ export default function DashboardPage() {
 
     const paidSet = new Set(thisMonthPayments.map((p) => p.monthly_payable_id));
 
-    let paid = 0;
+    const paid = thisMonthPayments.reduce((acc, p) => acc + p.amount_paid, 0);
+
     let unpaid = 0;
+    let totalPayableAmount = 0;
+    let totalPaybles = payables.length;
     (payables ?? []).forEach((p) => {
       const dueDate = new Date(
         today.getFullYear(),
@@ -116,12 +158,12 @@ export default function DashboardPage() {
         p.emi_day
       );
       if (dueDate >= currentMonthStart) {
-        if (paidSet.has(p.id)) paid += p.emi_amount;
-        else unpaid += p.emi_amount;
+        if (!paidSet.has(p.id)) unpaid += p.emi_amount;
       }
+      totalPayableAmount += p.emi_amount;
     });
 
-    setPayStats({ paid, unpaid });
+    setPayStats({ paid, unpaid, totalPayableAmount, totalPaybles });
 
     // 3. Principal vs Extra (excluding bill/rent)
     const emiPayables = (payables ?? []).filter(
@@ -152,74 +194,83 @@ export default function DashboardPage() {
           credit_card: "Credit Card",
           pay_later: "Pay Later",
           bill: "Bills",
-          rent: "Rent"
+          rent: "Rent",
         };
-    
+
         const type = typeLabels[p.type] || p.type;
         breakdown[type] = (breakdown[type] || 0) + p.emi_amount;
       }
     });
     setTypeBreakdown(breakdown);
 
+    // 5. Type Breakdown Remaining
+    const remainingBreakdown: Record<string, number> = {};
+    (payables ?? []).forEach((p) => {
+      const dueDate = new Date(
+        today.getFullYear(),
+        today.getMonth(),
+        p.emi_day
+      );
+      if (dueDate >= currentMonthStart) {
+        remainingBreakdown[p.type] =
+          (remainingBreakdown[p.type] || 0) + p.remaining_amount;
+      }
+    });
+    setTypeRemainingBreakdown(remainingBreakdown);
+
     setLoading(false);
   }
 
   return (
-    <div className="grid gap-4 p-4 md:p-6 max-w-screen-xl mx-auto">
+    <div className="grid gap-4 p-4 max-w-screen-xl mx-auto">
       {/* Upcoming Payment */}
       <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Upcoming Payment</CardTitle>
+        <CardHeader className="py-2 pt-5">
+          <CardTitle className="text-lg">Upcoming Payments</CardTitle>
         </CardHeader>
-        <CardContent>
-          {loading ? (
-            <>
-              <Skeleton className="h-4 w-32 mb-2" />
-              <Skeleton className="h-4 w-full mb-1" />
-              <Skeleton className="h-4 w-full mb-1" />
-              <Skeleton className="h-4 w-full mb-1" />
-              <Skeleton className="h-4 w-1/3 mt-2" />
-            </>
-          ) : upcoming ? (
-            <>
-              <p className="text-sm text-muted-foreground font-semibold mb-2">
-                Due on {upcoming.date}
-              </p>
-              {upcoming.items.map((item, i) => (
-                <div
-                  key={item.id}
-                  className="text-sm flex justify-between border-b py-1"
-                >
-                  <span>
-                    {i + 1}. {item.title}
-                  </span>
-                  <span>{formatINR(item.emi_amount)}</span>
-                </div>
+        <CardContent className="px-1 py-2 justify-center grid">
+          <Carousel className="w-full max-w-sm md:max-w-4xl">
+            <CarouselContent className="p-0">
+              {upcoming.map((group, idx) => (
+                <CarouselItem key={idx} className="max-w-[300px]">
+                  <div className="p-1">
+                    <div className="min-h-[240px]  min-w-[280px] md:max-w-[300px] bg-muted p-4 rounded-xl shadow-sm border">
+                      <p className="text-sm text-muted-foreground font-semibold">
+                        Due on {group.date}
+                      </p>
+                      {group.items.map((item, i) => (
+                        <div
+                          key={item.id}
+                          className="text-sm flex justify-between border-b py-1"
+                        >
+                          <span>
+                            {i + 1}. {item.title}
+                          </span>
+                          <span>{formatINR(item.emi_amount)}</span>
+                        </div>
+                      ))}
+                      <div className="pt-2 text-sm font-semibold text-right">
+                        Total: {formatINR(group.total)}
+                      </div>
+                    </div>
+                  </div>
+                </CarouselItem>
               ))}
-              <div className="pt-3 flex justify-between items-center">
-                <a
-                  href="/user/month"
-                  className="text-sm font-medium text-primary hover:underline flex items-center gap-1"
-                >
-                  View All
-                  <ChevronRight className="w-4 h-4" />
-                </a>
-                <div className="text-sm font-semibold">
-                  Total: {formatINR(upcoming.total)}
-                </div>
-              </div>
-            </>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              No upcoming payments.
-            </p>
-          )}
+            </CarouselContent>
+            <CarouselPrevious className="invisible md:visible"/>
+            <CarouselNext className="invisible md:visible"/>
+          </Carousel>
         </CardContent>
       </Card>
 
       {/* Paid / Unpaid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {[
+          {
+            label: "Total Payable",
+            value: payStats.totalPayableAmount,
+            color: "text-gray-600",
+          },
           {
             label: "Total Paid",
             value: payStats.paid,
@@ -270,11 +321,12 @@ export default function DashboardPage() {
                         label: "Payables",
                         data: Object.values(typeBreakdown),
                         backgroundColor: [
-                          "#a5b4fc",
-                          "#bbf7d0",
-                          "#fde68a",
-                          "#fca5a5",
-                          "#fdba74",
+                          "#a5b4fc", // soft indigo
+                          "#bbf7d0", // soft green
+                          "#fde68a", // soft yellow
+                          "#fca5a5", // soft red
+                          "#fdba74", // soft orange
+                          "#c4b5fd", // soft sky blue
                         ],
                         borderWidth: 1,
                       },
@@ -314,6 +366,12 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Bar Charts */}
+      <MonthlyPaymentsChart />
+
+      {/* Bar Charts */}
+      <MonthlyRemaingDebtChart/>
     </div>
   );
 }
