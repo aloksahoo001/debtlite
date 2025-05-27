@@ -124,8 +124,8 @@ export default function DashboardPage() {
     );
 
     const finalGroups = allDates
-    .filter((d) => new Date(d) >= today) // only today or future
-    .slice(0, 5);
+      .filter((d) => new Date(d) >= today) // only today or future
+      .slice(0, 5);
 
     const result = finalGroups.map((dateKey) => {
       const items = groupedByDate[dateKey];
@@ -224,44 +224,85 @@ export default function DashboardPage() {
   return (
     <div className="grid gap-4 p-4 max-w-screen-xl mx-auto">
       {/* Upcoming Payment */}
-      <Card>
-        <CardHeader className="py-2 pt-5">
-          <CardTitle className="text-lg">Upcoming Payments</CardTitle>
-        </CardHeader>
-        <CardContent className="px-1 py-2 justify-center grid">
-          <Carousel className="w-full max-w-sm md:max-w-4xl">
-            <CarouselContent className="p-0">
-              {upcoming.map((group, idx) => (
-                <CarouselItem key={idx} className="max-w-[300px]">
-                  <div className="p-1">
-                    <div className="min-h-[240px]  min-w-[280px] md:max-w-[300px] bg-muted p-4 rounded-xl shadow-sm border">
-                      <p className="text-sm text-muted-foreground font-semibold">
-                        Due on {group.date}
-                      </p>
-                      {group.items.map((item, i) => (
-                        <div
-                          key={item.id}
-                          className="text-sm flex justify-between border-b py-1"
-                        >
-                          <span>
-                            {i + 1}. {item.title}
-                          </span>
-                          <span>{formatINR(item.emi_amount)}</span>
+      {loading ? (
+        <Card>
+          <CardHeader className="py-2 pt-5">
+            <CardTitle className="text-lg">Upcoming Payments</CardTitle>
+          </CardHeader>
+          <CardContent className="px-1 py-2 justify-center grid">
+            <Carousel className="w-full max-w-sm md:max-w-4xl">
+              <CarouselContent className="p-0">
+                {Array.from({ length: 3 }).map((_, idx) => (
+                  <CarouselItem key={idx} className="max-w-[300px]">
+                    <div className="p-1">
+                      <div className="min-h-[240px] min-w-[280px] md:max-w-[300px] bg-muted p-4 rounded-xl shadow-sm border space-y-2">
+                        <Skeleton className="h-4 w-1/3" />{" "}
+                        {/* Due Date Skeleton */}
+                        <div className="space-y-1">
+                          {Array.from({ length: 3 }).map((__, i) => (
+                            <div
+                              key={i}
+                              className="flex justify-between items-center py-1"
+                            >
+                              <Skeleton className="h-4 w-2/3" />
+                              <Skeleton className="h-4 w-1/4" />
+                            </div>
+                          ))}
                         </div>
-                      ))}
-                      <div className="pt-2 text-sm font-semibold text-right">
-                        Total: {formatINR(group.total)}
+                        <div className="pt-2 flex justify-end">
+                          <Skeleton className="h-4 w-1/3" />{" "}
+                          {/* Total Skeleton */}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </CarouselItem>
-              ))}
-            </CarouselContent>
-            <CarouselPrevious className="invisible md:visible"/>
-            <CarouselNext className="invisible md:visible"/>
-          </Carousel>
-        </CardContent>
-      </Card>
+                  </CarouselItem>
+                ))}
+              </CarouselContent>
+              <CarouselPrevious className="invisible md:visible" />
+              <CarouselNext className="invisible md:visible" />
+            </Carousel>
+          </CardContent>
+        </Card>
+      ) : (
+        <Card>
+          <CardHeader className="py-2 pt-5">
+            <CardTitle className="text-lg">Upcoming Payments</CardTitle>
+          </CardHeader>
+          <CardContent className="px-1 py-2 justify-center grid">
+            <Carousel className="w-full max-w-sm md:max-w-4xl">
+              <CarouselContent className="p-0">
+                {upcoming.map((group, idx) => (
+                  <CarouselItem key={idx} className="max-w-[300px]">
+                    <div className="p-1">
+                      <div className="min-h-[240px]  min-w-[280px] md:max-w-[300px] bg-muted p-4 rounded-xl shadow-sm border">
+                        <p className="text-sm text-muted-foreground font-semibold">
+                          Due on {group.date}
+                        </p>
+                        {group.items.map((item, i) => (
+                          <div
+                            key={item.id}
+                            className="text-sm flex justify-between border-b py-1"
+                          >
+                            <span>
+                              {i + 1}. {item.title}
+                            </span>
+                            <span>{formatINR(item.emi_amount)}</span>
+                          </div>
+                        ))}
+                        <div className="pt-2 text-sm font-semibold text-right">
+                          Total: {formatINR(group.total)}
+                        </div>
+                      </div>
+                    </div>
+                  </CarouselItem>
+                ))}
+              </CarouselContent>
+              <CarouselPrevious className="invisible md:visible" />
+              <CarouselNext className="invisible md:visible" />
+            </Carousel>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Paid / Unpaid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -371,7 +412,7 @@ export default function DashboardPage() {
       <MonthlyPaymentsChart />
 
       {/* Bar Charts */}
-      <MonthlyRemaingDebtChart/>
+      <MonthlyRemaingDebtChart />
     </div>
   );
 }
