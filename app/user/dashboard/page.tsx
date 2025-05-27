@@ -17,6 +17,7 @@ import {
   CarouselPrevious,
 } from "@/components/ui/carousel";
 import MonthlyRemaingDebtChart from "@/components/MonthlyRemainingDebtChart";
+import MonthlyTotalDebtLineChart from "@/components/MonthlyTotalDebtLineChart";
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
@@ -413,6 +414,9 @@ export default function DashboardPage() {
 
       {/* Bar Charts */}
       <MonthlyRemaingDebtChart />
+
+      {/* Line Charts */}
+      <MonthlyTotalDebtLineChart />
     </div>
   );
 }

@@ -1,17 +1,25 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/utils/supabase/client";
-import { Bar } from "react-chartjs-2";
+import { Line } from "react-chartjs-2";
 import {
   Chart as ChartJS,
   CategoryScale,
   LinearScale,
-  BarElement,
+  PointElement,
+  LineElement,
   Tooltip,
   Legend,
 } from "chart.js";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend);
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Tooltip,
+  Legend
+);
 
 type Payment = {
   remaining_amount: number;
@@ -19,7 +27,7 @@ type Payment = {
   monthly_payables: { type: string };
 };
 
-export default function MonthlyRemaingDebtChart() {
+export default function MonthlyTotalDebtLineChart() {
   const supabase = createClient();
   const [chartData, setChartData] = useState<any>(null);
 
@@ -27,92 +35,64 @@ export default function MonthlyRemaingDebtChart() {
     const fetchData = async () => {
       const sixMonthsAgo = new Date();
       sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5);
-  
+
       const { data, error } = await supabase
         .from("payments")
-        .select("remaining_amount, payment_date, monthly_payables(type)")
+        .select("remaining_amount, payment_date")
         .gte("payment_date", sixMonthsAgo.toISOString());
-  
+
       if (error) {
         console.error("Fetch error:", error);
         return;
       }
-  
-      const grouped: Record<string, Record<string, number>> = {};
-      const typeSet = new Set<string>();
-  
+
+      // Group remaining_amount by month
+      const grouped: Record<string, number> = {};
+
       data?.forEach((p: unknown) => {
         const payment = p as Payment;
         const date = new Date(payment.payment_date);
-        const monthLabel = `${date.toLocaleString("en-US", { month: "short" })} ${date.getFullYear()}`;
-        const type = payment.monthly_payables?.type ?? "Unknown";
-  
-        typeSet.add(type);
-        if (!grouped[monthLabel]) grouped[monthLabel] = {};
-        grouped[monthLabel][type] = (grouped[monthLabel][type] || 0) + payment.remaining_amount;
+        const monthLabel = `${date.toLocaleString("en-US", {
+          month: "short",
+        })} ${date.getFullYear()}`;
+
+        grouped[monthLabel] = (grouped[monthLabel] || 0) + payment.remaining_amount;
       });
-  
+
       const months = Object.keys(grouped).sort(
         (a, b) => new Date(a).getTime() - new Date(b).getTime()
       );
-      const types = Array.from(typeSet);
-  
-      const typeLabels: Record<string, string> = {
-        emi: "EMI",
-        loan: "Loan",
-        credit_card: "Credit Card",
-        pay_later: "Pay Later",
-        bill: "Bills",
-        rent: "Rent",
-      };
-  
-      const colors = [
-        "#fdba74",
-        "#fde68a",
-        "#ddd6fe",
-        "#a5b4fc",
-        "#bbf7d0",
-        "#fca5a5",
-      ];
-  
-      // Calculate total per type across all months
-      const totalPerType: Record<string, number> = {};
-      types.forEach((type) => {
-        totalPerType[type] = months.reduce((sum, month) => {
-          return sum + (grouped[month]?.[type] || 0);
-        }, 0);
-      });
-  
-      // Sort types descending by total remaining amount
-      const sortedTypes = [...types].sort((a, b) => totalPerType[b] - totalPerType[a]);
-  
-      // Build datasets for sorted types
-      const datasets = sortedTypes.map((type, i) => ({
-        label: typeLabels[type] || type,
-        backgroundColor: colors[i % colors.length],
-        data: months.map((month) => grouped[month]?.[type] || 0),
-      }));
-  
+
       setChartData({
         labels: months,
-        datasets,
+        datasets: [
+          {
+            label: "Total Remaining Debt",
+            data: months.map((month) => grouped[month]),
+            borderColor: "#3b82f6",
+            backgroundColor: "#93c5fd",
+            fill: false,
+            tension: 0.3,
+            pointRadius: 5,
+            pointHoverRadius: 7,
+          },
+        ],
       });
     };
-  
+
     fetchData();
   }, []);
-  
 
   return (
     <Card>
       <CardHeader>
         <CardTitle className="text-base md:text-lg">
-          Remaining Debt After Payment (Last 6 Months)
+          Total Remaining Debt (Last 6 Months)
         </CardTitle>
       </CardHeader>
       <CardContent>
         {chartData ? (
-          <Bar
+          <Line
             data={chartData}
             options={{
               responsive: true,
@@ -124,7 +104,7 @@ export default function MonthlyRemaingDebtChart() {
                   beginAtZero: true,
                   title: {
                     display: true,
-                    text: "Debt Remaining Amount",
+                    text: "Total Debt Remaining",
                   },
                 },
                 x: {
