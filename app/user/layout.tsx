@@ -27,9 +27,7 @@ import {
   X,
   ChevronsLeft,
   ChevronsRight,
-  Inbox,
-  Building2,
-  Clock,
+  ListCheck,
 } from "lucide-react";
 import { LucideIcon } from "lucide-react";
 import { UserThemeSwitcher } from "@/components/theme-switcher";
@@ -120,7 +118,7 @@ export default function userLayout({
             <SidebarLink
               href="/user/month"
               label="Track Current Month"
-              icon={LayoutDashboard}
+              icon={ListCheck}
               collapsed={collapsed}
               onClick={() => setSidebarOpen(false)}
             />
