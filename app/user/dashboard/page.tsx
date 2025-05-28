@@ -376,60 +376,77 @@ export default function DashboardPage() {
 
       {/* Paid / Unpaid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Total Payable Card */}
         <Card>
           <CardHeader>
             <CardTitle>Total ({format(new Date(), "MMM-yyyy")})</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            {[
-              {
-                label: "Total Payable",
-                value: payStats.totalPayableAmount,
-                color: "text-gray-600",
-              },
-              {
-                label: "Total Paid",
-                value: payStats.paid,
-                color: "text-green-600",
-              },
-              {
-                label: "Yet To Pay",
-                value: payStats.unpaid,
-                color: "text-rose-600",
-              },
-            ].map(({ label, value, color }, idx) => (
-              <div
-                key={label}
-                className="flex justify-between text-md font-semibold text-gray-500 border-b pb-2"
-              >
-                <span>{label}</span>
-                <span className={`text-xl font-semibold ${color}`}>
-                  {formatINR(value)}
-                </span>
-              </div>
-            ))}
+            {loading
+              ? Array.from({ length: 3 }).map((_, i) => (
+                  <Skeleton key={i} className="h-6 w-full rounded-md" />
+                ))
+              : [
+                  {
+                    label: "Total Payable",
+                    value: payStats.totalPayableAmount,
+                    color: "text-gray-600",
+                  },
+                  {
+                    label: "Total Paid",
+                    value: payStats.paid,
+                    color: "text-green-600",
+                  },
+                  {
+                    label: "Yet To Pay",
+                    value: payStats.unpaid,
+                    color: "text-rose-600",
+                  },
+                ].map(({ label, value, color }, idx) => (
+                  <div
+                    key={label}
+                    className="flex justify-between text-md font-semibold text-gray-500 border-b pb-2"
+                  >
+                    <span>{label}</span>
+                    <span className={`text-xl font-semibold ${color}`}>
+                      {formatINR(value)}
+                    </span>
+                  </div>
+                ))}
           </CardContent>
         </Card>
+
+        {/* EMI Obligations Card */}
         <Card>
           <CardHeader>
             <CardTitle>Total EMI Obligations</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
-            {emiData.emiByPayee.map((p, index) => (
-              <div
-                key={p.payee}
-                className="flex justify-between text-sm font-semibold text-gray-500 border-b pb-2"
-              >
-                <span>
-                  {index + 1}. {p.payee}
-                </span>
-                <span>{formatINR(p.total_emi_amount)}</span>
-              </div>
-            ))}
+            {loading
+              ? Array.from({ length: 3 }).map((_, i) => (
+                  <Skeleton key={i} className="h-5 w-full rounded-md" />
+                ))
+              : emiData.emiByPayee.map((p, index) => (
+                  <div
+                    key={p.payee}
+                    className="flex justify-between text-sm font-semibold text-gray-500 border-b pb-2"
+                  >
+                    <span>
+                      {index + 1}. {p.payee}
+                    </span>
+                    <span>{formatINR(p.total_emi_amount)}</span>
+                  </div>
+                ))}
           </CardContent>
           <CardFooter className="flex justify-between text-sm font-semibold">
-            <span>Total</span>
-            <span>{formatINR(emiData.totalEmi)}</span>
+            {loading ? (
+              <Skeleton className="h-5 w-full rounded-md" />
+            ) : (
+              <>
+                <span>Total</span>
+                <span>{formatINR(emiData.totalEmi)}</span>
+              </>
+            )}
           </CardFooter>
         </Card>
       </div>
@@ -508,10 +525,10 @@ export default function DashboardPage() {
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Line Charts */}
-      <MonthlyTotalExtraPaidChart />
+        <MonthlyTotalExtraPaidChart />
         {/* Line Charts */}
-      <MonthlyTotalDebtLineChart />
-        </div>
+        <MonthlyTotalDebtLineChart />
+      </div>
     </div>
   );
 }
