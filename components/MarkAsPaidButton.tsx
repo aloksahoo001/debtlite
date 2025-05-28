@@ -11,11 +11,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { createClient } from "@/utils/supabase/client";
 import { useAuthStore } from "@/stores/useAuthStore";
+import { Loader2 } from "lucide-react";
 
 type Payable = {
   id: string;
+  title: string;
   emi_amount: number;
   remaining_amount: number;
+  extra_pay: number;
   type: string;
   // add other fields if needed
 };
@@ -29,9 +32,14 @@ export function MarkAsPaidButton({
 }) {
   const [open, setOpen] = useState(false);
   const [amountPaid, setAmountPaid] = useState(payable.emi_amount);
+  const [title, setTitle] = useState(payable.title);
   const [remainingAmount, setRemainingAmount] = useState(
-    payable.type == 'emi'?payable.remaining_amount-payable.emi_amount:payable.remaining_amount
+    payable.type == "emi"
+      ? payable.remaining_amount - payable.emi_amount
+      : payable.remaining_amount
   );
+  const [extraAmount, setExtraAmount] = useState(payable.extra_pay);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const supabase = createClient();
 
   const user = useAuthStore((state) => state.user);
@@ -40,14 +48,15 @@ export function MarkAsPaidButton({
   const markAsPaid = async (
     payableId: string,
     amountPaid: number,
-    remainingAmount: number
+    remainingAmount: number,
+    extraAmount: number
   ): Promise<{ error: any }> => {
     const userId = user?.id;
-  
+
     if (!userId) {
       return { error: new Error("User not found") };
     }
-  
+
     // Insert into payments
     const { error: insertError } = await supabase.from("payments").insert({
       monthly_payable_id: payableId,
@@ -55,35 +64,37 @@ export function MarkAsPaidButton({
       amount_paid: amountPaid,
       payment_date: new Date().toISOString(),
       remaining_amount: remainingAmount,
+      extra_amount: extraAmount,
     });
-  
+
     if (insertError) return { error: insertError };
-  
+
     // Update monthly_payables
     const { error: updateError } = await supabase
       .from("monthly_payables")
       .update({
         emi_amount: amountPaid,
         remaining_amount: remainingAmount,
+        extra_pay: extraAmount,
       })
       .eq("id", payableId);
-  
+
     return { error: updateError };
   };
-  
 
   const handleSubmit = async () => {
+    setIsSubmitting(true);
     const { error } = await markAsPaid(
       payable.id,
       Number(amountPaid),
-      Number(remainingAmount)
+      Number(remainingAmount),
+      Number(extraAmount)
     );
-    if (!error) 
-    {
+    if (!error) {
       onPaymentSuccess();
+      setIsSubmitting(false);
       setOpen(false);
-    }
-    else console.error("Payment Error:", error.message);
+    } else console.error("Payment Error:", error.message);
   };
 
   return (
@@ -96,7 +107,7 @@ export function MarkAsPaidButton({
 
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Confirm Payment</DialogTitle>
+          <DialogTitle>Confirm Payment <span className="text-muted-foreground">[{title}]</span></DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
@@ -116,10 +127,21 @@ export function MarkAsPaidButton({
               onChange={(e) => setRemainingAmount(Number(e.target.value))}
             />
           </div>
+          <div>
+            <label className="text-sm font-medium">Extra Amount</label>
+            <Input
+              type="number"
+              value={extraAmount}
+              onChange={(e) => setExtraAmount(Number(e.target.value))}
+            />
+          </div>
         </div>
 
         <DialogFooter>
-          <Button onClick={handleSubmit}>Submit</Button>
+          <Button onClick={handleSubmit} disabled={isSubmitting}>
+            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {isSubmitting ? "Submitting..." : "Submit"}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
