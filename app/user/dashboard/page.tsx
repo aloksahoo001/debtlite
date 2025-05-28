@@ -4,7 +4,13 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js";
 import { Pie } from "react-chartjs-2";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format, isSameMonth } from "date-fns";
 import { ChevronRight } from "lucide-react";
@@ -66,6 +72,20 @@ export default function DashboardPage() {
   const [typeRemainingBreakdown, setTypeRemainingBreakdown] = useState<
     Record<string, number>
   >({});
+  const [extraPayableData, setExtraPayableData] = useState<{
+    total: number;
+    byPayee: { payee: string; total_extra_pay: number }[];
+  }>({
+    total: 0,
+    byPayee: [],
+  });
+  const [emiData, setEmiData] = useState<{
+    totalEmi: number;
+    emiByPayee: { payee: string; total_emi_amount: number }[];
+  }>({
+    totalEmi: 0,
+    emiByPayee: [],
+  });
 
   useEffect(() => {
     fetchDashboardData();
@@ -219,6 +239,52 @@ export default function DashboardPage() {
     });
     setTypeRemainingBreakdown(remainingBreakdown);
 
+    // 6. Group and sum extra_pay by payee
+    const payeeMap: Record<string, number> = {};
+    for (const row of payables) {
+      const { payee, extra_pay } = row;
+      if (!payee) continue; // skip if payee is null/undefined
+      if (!payeeMap[payee]) {
+        payeeMap[payee] = 0;
+      }
+      payeeMap[payee] += extra_pay || 0;
+    }
+    const byPayee = Object.entries(payeeMap).map(
+      ([payee, total_extra_pay]) => ({
+        payee,
+        total_extra_pay,
+      })
+    );
+    const total = byPayee.reduce(
+      (sum, { total_extra_pay }) => sum + total_extra_pay,
+      0
+    );
+    setExtraPayableData({ total, byPayee });
+
+    //7. Group and sum Obligations(EMI) by payee
+    const payeeEmiMap: Record<string, number> = {};
+
+    for (const row of payables) {
+      if (row.type !== "emi" || !row.payee) continue;
+      payeeEmiMap[row.payee] =
+        (payeeEmiMap[row.payee] ?? 0) + (row.emi_amount ?? 0);
+    }
+
+    const emiByPayee = Object.entries(payeeEmiMap).map(
+      ([payee, total_emi_amount]) => ({
+        payee,
+        total_emi_amount,
+      })
+    );
+    emiByPayee.sort((a, b) => a.payee.localeCompare(b.payee));
+
+    const totalEmi = emiByPayee.reduce(
+      (sum, { total_emi_amount }) => sum + total_emi_amount,
+      0
+    );
+
+    setEmiData({ totalEmi, emiByPayee });
+
     setLoading(false);
   }
 
@@ -306,8 +372,13 @@ export default function DashboardPage() {
       )}
 
       {/* Paid / Unpaid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {[
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Card>
+          <CardHeader>
+            <CardTitle>Total ({format(new Date(), "MMM-yyyy")})</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+          {[
           {
             label: "Total Payable",
             value: payStats.totalPayableAmount,
@@ -324,23 +395,40 @@ export default function DashboardPage() {
             color: "text-rose-600",
           },
         ].map(({ label, value, color }, idx) => (
-          <Card key={idx}>
-            <CardHeader>
-              <CardTitle>
-                {label} ({format(new Date(), "MMM-yyyy")})
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {loading ? (
-                <Skeleton className="h-8 w-32" />
-              ) : (
-                <p className={`text-2xl font-semibold ${color}`}>
-                  {formatINR(value)}
-                </p>
-              )}
-            </CardContent>
-          </Card>
-        ))}
+              <div
+                key={label}
+                className="flex justify-between text-md font-semibold text-gray-500 border-b pb-2"
+              >
+                <span>
+                  {label}
+                </span>
+                <span className={`text-xl font-semibold ${color}`}>{formatINR(value)}</span>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Total EMI Obligations</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {emiData.emiByPayee.map((p, index) => (
+              <div
+                key={p.payee}
+                className="flex justify-between text-sm font-semibold text-gray-500 border-b pb-2"
+              >
+                <span>
+                  {index + 1}. {p.payee}
+                </span>
+                <span>{formatINR(p.total_emi_amount)}</span>
+              </div>
+            ))}
+          </CardContent>
+          <CardFooter className="flex justify-between text-sm font-semibold">
+            <span>Total</span>
+            <span>{formatINR(emiData.totalEmi)}</span>
+          </CardFooter>
+        </Card>
       </div>
 
       {/* Pie Charts */}
@@ -408,12 +496,13 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Bar Charts */}
+        <MonthlyPaymentsChart />
 
-      {/* Bar Charts */}
-      <MonthlyPaymentsChart />
-
-      {/* Bar Charts */}
-      <MonthlyRemaingDebtChart />
+        {/* Bar Charts */}
+        <MonthlyRemaingDebtChart />
+      </div>
 
       {/* Line Charts */}
       <MonthlyTotalDebtLineChart />
