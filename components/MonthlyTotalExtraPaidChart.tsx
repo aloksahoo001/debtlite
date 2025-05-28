@@ -165,6 +165,7 @@ export default function MonthlyTotalExtraPaidChart() {
                 },
               },
             }}
+            height={200}
           />
         ) : (
           <div className="text-sm text-muted-foreground">Loading chart...</div>
