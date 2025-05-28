@@ -34,14 +34,14 @@ ChartJS.register(
 );
 
 type Payment = {
-  remaining_amount: number;
+  extra_amount: number;
   payment_date: string;
   monthly_payables: {
     payee: string;
   };
 };
 
-export default function MonthlyTotalDebtLineChart() {
+export default function MonthlyTotalExtraPaidChart() {
   const supabase = createClient();
   const [chartData, setChartData] = useState<any>(null);
   const [payee, setPayee] = useState<string>("all");
@@ -53,7 +53,7 @@ export default function MonthlyTotalDebtLineChart() {
 
     const { data, error } = await supabase
       .from("payments")
-      .select("remaining_amount, payment_date, monthly_payables(payee)")
+      .select("extra_amount, payment_date, monthly_payables(payee)")
       .gte("payment_date", sixMonthsAgo.toISOString());
 
     if (error) {
@@ -69,16 +69,16 @@ export default function MonthlyTotalDebtLineChart() {
         payeeSet.add(payeeName);
       }
     });
-    setPayees(Array.from(payeeSet).sort()); // Optional: sort alphabetically
+    setPayees(Array.from(payeeSet).sort());
 
     // Step 2: Convert to type-safe Payment[]
     const payments: Payment[] = (data ?? []).map((d: any) => ({
-      remaining_amount: d.remaining_amount,
+      extra_amount: d.extra_amount,
       payment_date: d.payment_date,
       monthly_payables: d.monthly_payables,
     }));
 
-    // Step 3: Apply filter
+    // Step 3: Apply payee filter
     const filtered = payments.filter((p) => {
       return payee === "all" || p.monthly_payables?.payee === payee;
     });
@@ -91,7 +91,7 @@ export default function MonthlyTotalDebtLineChart() {
         month: "short",
       })} ${date.getFullYear()}`;
 
-      grouped[monthLabel] = (grouped[monthLabel] || 0) + p.remaining_amount;
+      grouped[monthLabel] = (grouped[monthLabel] || 0) + (p.extra_amount ?? 0);
     });
 
     const months = Object.keys(grouped).sort(
@@ -103,10 +103,10 @@ export default function MonthlyTotalDebtLineChart() {
       labels: months,
       datasets: [
         {
-          label: "Total Remaining Debt",
+          label: "Total Extra Amount Paid",
           data: months.map((month) => grouped[month]),
-          borderColor: "#3b82f6",
-          backgroundColor: "#93c5fd",
+          borderColor: "#10b981", // emerald-500
+          backgroundColor: "#6ee7b7", // emerald-300
           fill: false,
           tension: 0.3,
           pointRadius: 5,
@@ -124,7 +124,7 @@ export default function MonthlyTotalDebtLineChart() {
     <Card>
       <CardHeader className="flex flex-col md:flex-row md:justify-between md:items-center gap-2">
         <CardTitle className="text-base md:text-lg">
-          Total Remaining Debt (Last 6 Months)
+          Total Extra Amount Paid (Last 6 Months)
         </CardTitle>
         <Select value={payee} onValueChange={setPayee}>
           <SelectTrigger className="w-[180px]">
@@ -154,7 +154,7 @@ export default function MonthlyTotalDebtLineChart() {
                   beginAtZero: true,
                   title: {
                     display: true,
-                    text: "Total Debt Remaining",
+                    text: "Total Extra Paid",
                   },
                 },
                 x: {
