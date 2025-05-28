@@ -144,9 +144,11 @@ export default function DashboardPage() {
       (a, b) => new Date(a).getTime() - new Date(b).getTime()
     );
 
+    const todayNew = new Date();
+    todayNew.setHours(0, 0, 0, 0);
     const finalGroups = allDates
-      .filter((d) => new Date(d) >= today) // only today or future
-      .slice(0, 5);
+      .filter((d) => new Date(d) >= todayNew) // only today or future
+      .slice(0, 7);
 
     const result = finalGroups.map((dateKey) => {
       const items = groupedByDate[dateKey];
@@ -378,31 +380,31 @@ export default function DashboardPage() {
             <CardTitle>Total ({format(new Date(), "MMM-yyyy")})</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-          {[
-          {
-            label: "Total Payable",
-            value: payStats.totalPayableAmount,
-            color: "text-gray-600",
-          },
-          {
-            label: "Total Paid",
-            value: payStats.paid,
-            color: "text-green-600",
-          },
-          {
-            label: "Yet To Pay",
-            value: payStats.unpaid,
-            color: "text-rose-600",
-          },
-        ].map(({ label, value, color }, idx) => (
+            {[
+              {
+                label: "Total Payable",
+                value: payStats.totalPayableAmount,
+                color: "text-gray-600",
+              },
+              {
+                label: "Total Paid",
+                value: payStats.paid,
+                color: "text-green-600",
+              },
+              {
+                label: "Yet To Pay",
+                value: payStats.unpaid,
+                color: "text-rose-600",
+              },
+            ].map(({ label, value, color }, idx) => (
               <div
                 key={label}
                 className="flex justify-between text-md font-semibold text-gray-500 border-b pb-2"
               >
-                <span>
-                  {label}
+                <span>{label}</span>
+                <span className={`text-xl font-semibold ${color}`}>
+                  {formatINR(value)}
                 </span>
-                <span className={`text-xl font-semibold ${color}`}>{formatINR(value)}</span>
               </div>
             ))}
           </CardContent>
