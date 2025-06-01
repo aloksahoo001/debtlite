@@ -26,9 +26,11 @@ type Payable = {
 export function MarkAsPaidButton({
   payable,
   onPaymentSuccess,
+  selectedMonth,
 }: {
   payable: Payable;
   onPaymentSuccess: () => void;
+  selectedMonth: string;
 }) {
   const [open, setOpen] = useState(false);
   const [amountPaid, setAmountPaid] = useState(payable.emi_amount);
@@ -53,16 +55,23 @@ export function MarkAsPaidButton({
   ): Promise<{ error: any }> => {
     const userId = user?.id;
 
-    if (!userId) {
-      return { error: new Error("User not found") };
-    }
+    if (!userId) return { error: new Error("User not found") };
+
+    const today = new Date();
+    const currentMonthStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
+
+    const [selYear, selMonth] = selectedMonth.split("-").map(Number);
+    const paymentDate =
+      selectedMonth === currentMonthStr
+        ? today
+        : new Date(selYear, selMonth, 0); // last day of selected month
 
     // Insert into payments
     const { error: insertError } = await supabase.from("payments").insert({
       monthly_payable_id: payableId,
       user_id: userId,
       amount_paid: amountPaid,
-      payment_date: new Date().toISOString(),
+      payment_date: paymentDate.toISOString(),
       remaining_amount: remainingAmount,
       extra_amount: extraAmount,
     });
@@ -107,7 +116,10 @@ export function MarkAsPaidButton({
 
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Confirm Payment <span className="text-muted-foreground">[{title}]</span></DialogTitle>
+          <DialogTitle>
+            Confirm Payment{" "}
+            <span className="text-muted-foreground">[{title}]</span>
+          </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">

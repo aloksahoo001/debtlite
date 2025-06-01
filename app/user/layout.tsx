@@ -54,7 +54,7 @@ export default function userLayout({
   const getPageTitle = () => {
     if (pathname.startsWith("/user/dashboard")) return "Overview";
     if (pathname.startsWith("/user/payables")) return "Payables";
-    if (pathname.startsWith("/user/month")) return "Track Payables";
+    if (pathname.startsWith("/user/payments")) return "Track Monthly Payments";
     return "User";
   };
 
@@ -116,15 +116,15 @@ export default function userLayout({
               onClick={() => setSidebarOpen(false)}
             />
             <SidebarLink
-              href="/user/month"
-              label="Track Current Month"
+              href="/user/payments"
+              label="Track Monthly Payments"
               icon={ListCheck}
               collapsed={collapsed}
               onClick={() => setSidebarOpen(false)}
             />
             <SidebarLink
               href="/user/payables"
-              label="Payables"
+              label="All Payables"
               icon={Users}
               collapsed={collapsed}
               onClick={() => setSidebarOpen(false)}

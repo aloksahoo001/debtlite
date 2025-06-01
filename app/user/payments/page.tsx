@@ -8,7 +8,6 @@ import {
   CardContent,
   CardFooter,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import {
   Select,
@@ -19,9 +18,9 @@ import {
 } from "@/components/ui/select";
 import { createClient } from "@/utils/supabase/client";
 import type { Payable } from "@/types/supabase";
-import { format, isSameMonth } from "date-fns";
+import { format } from "date-fns";
 import { toast } from "sonner";
-import { CheckCircle, Clock, Landmark, User, Wallet } from "lucide-react";
+import { CalendarCheck, CheckCircle, Clock, Landmark, User, Wallet } from "lucide-react";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { formatINR } from "@/utils/utils";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -36,13 +35,18 @@ export default function ThisMonthPayablesComponent() {
   const [filterPayee, setFilterPayee] = useState<string>("all");
   const [uniquePayees, setUniquePayees] = useState<string[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [selectedMonth, setSelectedMonth] = useState(() => {
+    const today = new Date();
+    return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
+  });
+  const [availableMonths, setAvailableMonths] = useState<string[]>([]);
 
   const user = useAuthStore((state) => state.user);
   if (!user) return null;
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [selectedMonth]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -60,10 +64,32 @@ export default function ThisMonthPayablesComponent() {
       return;
     }
 
-    const currentMonth = new Date();
-    const filteredPayments = (paymentsData || []).filter((p) =>
-      isSameMonth(new Date(p.payment_date), currentMonth)
-    );
+    const today = new Date();
+    const currentMonthStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
+
+    // Extract available months from payments
+    const monthSet = new Set<string>();
+    (paymentsData || []).forEach((p) => {
+      const date = new Date(p.payment_date);
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      monthSet.add(`${year}-${month}`);
+    });
+
+    // Ensure current month is always included
+    monthSet.add(currentMonthStr);
+
+    const sortedMonths = Array.from(monthSet).sort().reverse(); // latest first
+    setAvailableMonths(sortedMonths);
+
+    const [year, month] = selectedMonth.split("-").map(Number);
+    const startOfMonth = new Date(year, month - 1, 1);
+    const endOfMonth = new Date(year, month, 0);
+
+    const filteredPayments = (paymentsData || []).filter((p) => {
+      const paymentDate = new Date(p.payment_date);
+      return paymentDate >= startOfMonth && paymentDate <= endOfMonth;
+    });
 
     setPayables(payableData || []);
     setPayments(filteredPayments);
@@ -83,27 +109,6 @@ export default function ThisMonthPayablesComponent() {
 
   const isPaid = (payableId: string) => {
     return payments.some((p) => p.monthly_payable_id === payableId);
-  };
-
-  const markAsPaid = async (
-    payableId: string,
-    amountPaid: Number,
-    remainingAmount: Number
-  ) => {
-    const { error } = await supabase.from("payments").insert({
-      monthly_payable_id: payableId,
-      user_id: user.id,
-      amount_paid: amountPaid,
-      payment_date: new Date().toISOString(),
-      remaining_amount: remainingAmount,
-    });
-
-    if (error) {
-      toast.error("Failed to mark as paid.");
-    } else {
-      toast.success("Marked as paid.");
-      fetchData();
-    }
   };
 
   const currentMonthPayables = payables.filter((p) => {
@@ -135,15 +140,19 @@ export default function ThisMonthPayablesComponent() {
 
   const total_yet_to_pay = total_payable - total_paid;
 
-  const total_debt = allPayables.reduce((sum, p) => {
+  /*const total_debt = allPayables.reduce((sum, p) => {
     return p.type !== "bill" && p.type !== "rent" && p.type !== "loan"
       ? sum + (p.remaining_amount || 0)
       : sum;
-  }, 0);
+  }, 0);*/
 
   const total_bills = allPayables.reduce((sum, p) => {
     return p.type == "bill" ? sum + (p.emi_amount || 0) : sum;
   }, 0);
+
+  const total_not_paid_count = allPayables.filter(
+    (p) => !payments.some((payment) => payment.monthly_payable_id === p.id)
+  ).length;
 
   const getDueDate = (emi_day: number) => {
     const today = new Date();
@@ -160,7 +169,7 @@ export default function ThisMonthPayablesComponent() {
   return (
     <div className="p-4 space-y-6">
       <div className="flex justify-between items-center">
-        <div className="w-64">
+        <div className="w-48 md:w-48">
           <Select onValueChange={setFilterPayee} defaultValue={filterPayee}>
             <SelectTrigger>
               <SelectValue placeholder="Select Payee" />
@@ -175,7 +184,30 @@ export default function ThisMonthPayablesComponent() {
             </SelectContent>
           </Select>
         </div>
-        <div className="font-semibold">{format(new Date(), "MMM-yyyy")}</div>
+        <div className="w-44 md:w-48">
+          <Select
+            onValueChange={(value) => setSelectedMonth(value)}
+            value={selectedMonth}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select Month" />
+            </SelectTrigger>
+            <SelectContent>
+              {availableMonths.map((monthStr) => {
+                const [year, month] = monthStr.split("-");
+                const label = format(
+                  new Date(Number(year), Number(month) - 1),
+                  "MMMM yyyy"
+                );
+                return (
+                  <SelectItem key={monthStr} value={monthStr}>
+                    {label}
+                  </SelectItem>
+                );
+              })}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {loading ? (
@@ -219,16 +251,16 @@ export default function ThisMonthPayablesComponent() {
             </CardHeader>
             <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
               <div>
-                <strong>Total Payable:</strong> {formatINR(total_payable)}
+                <strong>Total Paid:</strong> {formatINR(total_paid)}
               </div>
               <div>
-                <strong>Yet to Pay:</strong> {formatINR(total_yet_to_pay)}
+                <strong>No. of Payments Left:</strong> {total_not_paid_count}
+              </div>
+              <div>
+                <strong>Amount to Pay:</strong> {formatINR(total_yet_to_pay)}
               </div>
               <div>
                 <strong>Total Bills:</strong> {formatINR(total_bills)}
-              </div>
-              <div>
-                <strong>Total Debt:</strong> {formatINR(total_debt)}
               </div>
             </CardContent>
           </Card>
@@ -260,20 +292,19 @@ export default function ThisMonthPayablesComponent() {
                         ) : (
                           <MarkAsPaidButton
                             payable={p}
+                            selectedMonth={selectedMonth}
                             onPaymentSuccess={fetchData}
                           />
                         )}
                       </div>
-                      <div className="text-sm text-muted-foreground grid grid-cols-1 md:grid-cols-4 pb-2">
+                      <div className="text-sm text-muted-foreground grid grid-cols-1 md:grid-cols-5 pb-2">
                         <div className="flex items-center justify-between md:justify-start gap-2">
                           <div className="flex items-center gap-2 font-semibold">
                             <Wallet className="w-4 h-4 text-foreground" />
                             Pay Type:
                           </div>
                           <div className="items-center">
-                            {p.pay_type == "auto_debit"
-                              ? "Auto"
-                              : "Manual"}
+                            {p.pay_type == "auto_debit" ? "Auto" : "Manual"}
                           </div>
                         </div>
                         <div className="flex justify-between md:justify-start gap-2 items-center">
@@ -295,8 +326,19 @@ export default function ThisMonthPayablesComponent() {
                             <Clock className="w-4 h-4 text-foreground" />
                             Remaining:
                           </div>
-                          <div className="items-center">{formatINR(p.remaining_amount)}</div>
-                        </div>  
+                          <div className="items-center">
+                            {formatINR(p.remaining_amount)}
+                          </div>
+                        </div>
+                        <div className="flex justify-between md:justify-start items-center gap-2">
+                          <div className="flex items-center gap-2 font-semibold">
+                            <CalendarCheck className="w-4 h-4 text-foreground" />
+                            Last Date:
+                          </div>
+                          <div className="items-center">
+                            {format(p.end_date, "dd-MMM-yy")}
+                          </div>
+                        </div>
                       </div>
                       {i !== payablesForDay.length - 1 && <Separator />}
                     </div>
