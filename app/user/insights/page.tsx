@@ -79,7 +79,7 @@ export default function Insights() {
   );
 
   const now = new Date();
-  const threeMonthsFromNow = endOfMonth(addMonths(now, 3));
+  const threeMonthsFromNow = endOfMonth(addMonths(now, 4));
   
   const closingSoon = payables
     .filter((p) => {
