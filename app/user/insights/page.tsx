@@ -19,6 +19,7 @@ type Payable = {
   emi_amount: number;
   payee: string;
   end_date: string; // ISO format
+  total_amount: string;
 };
 
 export default function Insights() {
@@ -30,7 +31,7 @@ export default function Insights() {
       const { data, error } = await supabase
         .from("monthly_payables")
         .select(
-          "title, extra_pay, interest_per_month, remaining_amount, emi_amount, payee, end_date"
+          "title, extra_pay, interest_per_month, remaining_amount, emi_amount, payee, end_date, total_amount"
         )
         .eq("is_closed", false);
 
@@ -116,7 +117,7 @@ export default function Insights() {
                 <div className="font-medium mb-1">
                   {idx + 1}. {p.title}
                 </div>
-                <div className="space-y-1 text-sm text-muted-foreground grid grid-cols-1 md:grid-cols-3">
+                <div className="space-y-1 text-sm text-muted-foreground grid grid-cols-1 md:grid-cols-4">
                   <div className="flex justify-between md:justify-normal gap-2 items-center">
                     <span className="font-semibold">Payee:</span>
                     <span>{p.payee}</span>
@@ -128,6 +129,10 @@ export default function Insights() {
                   <div className="flex justify-between md:justify-normal gap-2 items-center">
                     <span className="font-semibold">Remaining:</span>
                     <span>₹{p.remaining_amount.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between md:justify-normal gap-2 items-center">
+                    <span className="font-semibold">Total:</span>
+                    <span>₹{p.total_amount.toLocaleString()}</span>
                   </div>
                 </div>
                 <div className="flex md:justify-normal gap-2 items-center font-medium">
