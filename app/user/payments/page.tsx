@@ -20,11 +20,19 @@ import { createClient } from "@/utils/supabase/client";
 import type { Payable } from "@/types/supabase";
 import { format } from "date-fns";
 import { toast } from "sonner";
-import { CalendarCheck, CheckCircle, Clock, Landmark, User, Wallet } from "lucide-react";
+import {
+  CalendarCheck,
+  CheckCircle,
+  Clock,
+  Landmark,
+  User,
+  Wallet,
+} from "lucide-react";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { formatINR } from "@/utils/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { MarkAsPaidButton } from "@/components/MarkAsPaidButton";
+import { PayableChartDialog } from "@/components/PayableChartDialog";
 
 export default function ThisMonthPayablesComponent() {
   const supabase = createClient();
@@ -155,13 +163,9 @@ export default function ThisMonthPayablesComponent() {
   ).length;
 
   const getDueDate = (emi_day: number) => {
-    const today = new Date();
-    const day = today.getDate();
-    const year = today.getFullYear();
-    const month = today.getMonth();
-    const dueMonth = day <= emi_day ? month : month;
+    const [year, month] = selectedMonth.split("-").map(Number);
     return format(
-      new Date(year, dueMonth, emi_day),
+      new Date(year, month - 1, emi_day),
       "'Day - 'do 'of' MMMM, eeee"
     );
   };
@@ -284,18 +288,24 @@ export default function ThisMonthPayablesComponent() {
                         <div className="text-sm font-medium">
                           {i + 1}. {p.title} — ₹{p.emi_amount}
                         </div>
-                        {isPaid(p.id) ? (
-                          <div className="inline-flex items-center gap-1 text-green-700 bg-green-100 px-2 py-0.5 rounded text-sm">
-                            <CheckCircle className="w-3.5 h-3.5" />
-                            Paid
-                          </div>
-                        ) : (
-                          <MarkAsPaidButton
-                            payable={p}
-                            selectedMonth={selectedMonth}
-                            onPaymentSuccess={fetchData}
+                        <div className="flex items-center gap-2">
+                          <PayableChartDialog
+                            monthlyPayableId={p.id}
+                            payableTitle={p.title}
                           />
-                        )}
+                          {isPaid(p.id) ? (
+                            <div className="inline-flex items-center gap-1 text-green-700 bg-green-100 px-3 py-1 rounded-md text-sm">
+                              <CheckCircle className="w-4 h-4" />
+                              Paid
+                            </div>
+                          ) : (
+                            <MarkAsPaidButton
+                              payable={p}
+                              selectedMonth={selectedMonth}
+                              onPaymentSuccess={fetchData}
+                            />
+                          )}
+                        </div>
                       </div>
                       <div className="text-sm text-muted-foreground grid grid-cols-1 md:grid-cols-5 pb-2">
                         <div className="flex items-center justify-between md:justify-start gap-2">
