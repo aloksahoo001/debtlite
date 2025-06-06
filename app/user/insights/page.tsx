@@ -80,7 +80,7 @@ export default function Insights() {
 
   const now = new Date();
   const threeMonthsFromNow = endOfMonth(addMonths(now, 4));
-  
+
   const closingSoon = payables
     .filter((p) => {
       if (!p.end_date) return false;
@@ -90,7 +90,7 @@ export default function Insights() {
     .sort(
       (a, b) => new Date(a.end_date).getTime() - new Date(b.end_date).getTime()
     );
-  
+  const totalClosingEmi = closingSoon.reduce((sum, p) => sum + p.emi_amount, 0);
 
   const totalExtra = topExtraPayables.reduce((sum, p) => sum + p.extra_pay, 0);
 
@@ -137,7 +137,9 @@ export default function Insights() {
                 </div>
                 <div className="flex md:justify-normal gap-2 items-center font-medium">
                   <span className="">Ends On:</span>
-                  <span className="text-green-700">{format(new Date(p.end_date), "dd-MMM-yyyy")}</span>
+                  <span className="text-green-700">
+                    {format(new Date(p.end_date), "dd-MMM-yyyy")}
+                  </span>
                 </div>
               </div>
             ))
@@ -147,6 +149,15 @@ export default function Insights() {
             </div>
           )}
         </CardContent>
+        {closingSoon.length > 0 && (
+          <CardFooter className="text-sm text-muted-foreground font-medium pt-2">
+            <p>A total EMI burden of
+            <span className="text-green-700 font-semibold px-1">
+              ₹{totalClosingEmi.toLocaleString()}
+            </span>
+            will be cleared in the next 3 months.</p>
+          </CardFooter>
+        )}
       </Card>
 
       {/* Row 1: Extra + Interest Cards */}
