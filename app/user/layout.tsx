@@ -28,6 +28,7 @@ import {
   ChevronsLeft,
   ChevronsRight,
   ListCheck,
+  TrendingUp,
 } from "lucide-react";
 import { LucideIcon } from "lucide-react";
 import { UserThemeSwitcher } from "@/components/theme-switcher";
@@ -55,6 +56,7 @@ export default function userLayout({
     if (pathname.startsWith("/user/dashboard")) return "Overview";
     if (pathname.startsWith("/user/payables")) return "Payables";
     if (pathname.startsWith("/user/payments")) return "Track Monthly Payments";
+    if (pathname.startsWith("/user/insights")) return "Debt Free Insights";
     return "User";
   };
 
@@ -126,6 +128,13 @@ export default function userLayout({
               href="/user/payables"
               label="All Payables"
               icon={Users}
+              collapsed={collapsed}
+              onClick={() => setSidebarOpen(false)}
+            />
+            <SidebarLink
+              href="/user/insights"
+              label="Debt Free Insights"
+              icon={TrendingUp}
               collapsed={collapsed}
               onClick={() => setSidebarOpen(false)}
             />
